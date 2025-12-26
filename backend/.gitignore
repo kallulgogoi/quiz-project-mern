@@ -1,0 +1,28 @@
+.env
+node_modules/
+dist/
+uploads/
+.DS_Store
+npm-debug.log
+.vscode/
+.idea/
+coverage/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.log
+.cache/
+.next/
+
+# Ignore build output
+build/
+out/
+# Ignore dependency directories
+jspm_packages/
+bower_components/
+# Ignore system files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
