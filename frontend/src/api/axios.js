@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:5000/api", // Matches server.js PORT
+  baseURL: "http://localhost:5000/api",
 });
 
 api.interceptors.request.use((config) => {
@@ -16,12 +16,19 @@ export const endpoints = {
     register: "/auth/register",
     verify: "/auth/verify-otp",
     me: "/auth/me",
+    updateProfile: "/auth/profile",
+    changePassword: "/auth/change-password",
   },
   quiz: {
     create: "/quizzes",
     myQuizzes: (type) => `/quizzes/my-quizzes?type=${type}`,
     getByCode: (code) => `/quizzes/code/${code}`,
     getById: (id) => `/quizzes/${id}`,
+    update: (id) => `/quizzes/${id}`,
+
+    // *** ADD THIS LINE ***
+    delete: (id) => `/quizzes/${id}`,
+
     join: "/quizzes/join",
     start: (id) => `/quizzes/${id}/start`,
     submit: (id) => `/quizzes/${id}/submit`,

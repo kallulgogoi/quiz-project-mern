@@ -545,8 +545,6 @@ exports.submitAnswers = async (req, res) => {
           break;
 
         case "descriptive":
-          // For descriptive, we might need manual grading
-          // For now, just mark as pending
           isCorrect = false;
           pointsEarned = 0;
           break;
@@ -598,6 +596,18 @@ exports.submitAnswers = async (req, res) => {
         },
       }
     );
+
+    // --- NEW: Notify Live Dashboard ---
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`quiz-${quizId}`).emit("leaderboard-update", {
+        userId: req.user._id,
+        username: req.user.username,
+        score: totalScore,
+        rank: rank,
+      });
+    }
+    // ----------------------------------
 
     res.json({
       success: true,
@@ -664,7 +674,6 @@ exports.getLeaderboard = async (req, res) => {
     });
   }
 };
-
 // Host: Start Quiz Live
 exports.startQuizLive = async (req, res) => {
   try {
@@ -673,17 +682,22 @@ exports.startQuizLive = async (req, res) => {
 
     const quiz = await Quiz.findById(quizId);
     if (!quiz) {
-      return res.status(404).json({
-        success: false,
-        message: "Quiz not found",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "Quiz not found" });
     }
 
-    // Check if user is host
     if (quiz.host.toString() !== req.user._id.toString()) {
-      return res.status(403).json({
+      return res.status(403).json({ success: false, message: "Unauthorized" });
+    }
+
+    // --- CHECK: Enforce Schedule ---
+    const now = new Date();
+    if (new Date(quiz.startTime) > now) {
+      return res.status(400).json({
         success: false,
-        message: "Only the host can start the quiz",
+        message:
+          "Quiz cannot start before the scheduled time. Please reschedule if you want to start now.",
       });
     }
 
@@ -691,10 +705,10 @@ exports.startQuizLive = async (req, res) => {
     quiz.status = "active";
     await quiz.save();
 
-    // Notify all participants via Socket.io
+    // Notify all participants
     io.to(`quiz-${quizId}`).emit("quiz-started", {
       quizId,
-      startTime: new Date(),
+      startTime: quiz.startTime,
     });
 
     res.json({
@@ -703,10 +717,7 @@ exports.startQuizLive = async (req, res) => {
     });
   } catch (error) {
     console.error("Start quiz live error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to start quiz live",
-    });
+    res.status(500).json({ success: false, message: "Failed to start quiz" });
   }
 };
 

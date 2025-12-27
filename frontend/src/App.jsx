@@ -3,7 +3,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { SocketProvider } from "./context/SocketContext";
 import { Toaster } from "react-hot-toast";
 import ProtectedRoute from "./components/ProtectedRoute";
-import Layout from "./components/Layout"; // Import the Layout component
+import Layout from "./components/Layout";
 
 // Pages
 import Login from "./pages/auth/Login";
@@ -11,12 +11,15 @@ import Register from "./pages/auth/Register";
 import VerifyOTP from "./pages/auth/VerifyOTP";
 import Dashboard from "./pages/Dashboard";
 import CreateQuiz from "./pages/host/CreateQuiz";
-import ManageQuiz from "./pages/host/ManageQuiz";
+import LiveLeaderboard from "./pages/host/LiveLeaderboard";
+import EditQuiz from "./pages/host/EditQuiz";
+import ManageQuiz from "./pages/host/ManageQuiz"; // <--- IMPORT THIS
 import HostLobby from "./pages/host/HostLobby";
 import JoinQuiz from "./pages/participant/JoinQuiz";
 import UserLobby from "./pages/participant/UserLobby";
 import TakeQuiz from "./pages/participant/TakeQuiz";
 import Result from "./pages/participant/Result";
+import Profile from "./pages/Profile";
 
 function App() {
   return (
@@ -36,13 +39,16 @@ function App() {
               <Route element={<Layout />}>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/dashboard" element={<Navigate to="/" />} />
-
+                <Route path="/profile" element={<Profile />} />
                 {/* Host Pages */}
                 <Route path="/create" element={<CreateQuiz />} />
-                <Route path="/host/manage/:quizId" element={<ManageQuiz />} />
+                <Route path="/host/edit/:quizId" element={<EditQuiz />} />
+                <Route
+                  path="/host/live-dashboard/:quizId"
+                  element={<LiveLeaderboard />}
+                />
+                <Route path="/host/manage/:quizId" element={<ManageQuiz />} />{" "}
                 <Route path="/host/live/:quizId" element={<HostLobby />} />
-
-                {/* Participant Pages (Entry & Results) */}
                 <Route path="/join" element={<JoinQuiz />} />
                 <Route path="/result/:quizId" element={<Result />} />
               </Route>
