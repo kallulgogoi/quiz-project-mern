@@ -1,146 +1,319 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api, { endpoints } from "../../api/axios";
-import { Timer } from "lucide-react";
+import {
+  Timer,
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle2,
+  Loader2,
+  Send,
+  AlertCircle,
+} from "lucide-react";
 import { differenceInSeconds } from "date-fns";
+import toast from "react-hot-toast";
 
 export default function TakeQuiz() {
   const { quizId } = useParams();
   const navigate = useNavigate();
-  const [questions, setQuestions] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState({}); // { questionId: answer }
-  const [timeLeft, setTimeLeft] = useState(0);
 
+  const [questions, setQuestions] = useState([]);
+  const [quizMeta, setQuizMeta] = useState(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [answers, setAnswers] = useState({});
+  const [timeLeft, setTimeLeft] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Use a ref to track submission status inside intervals/effects without dependencies
+  const isSubmittingRef = useRef(false);
+
+  // 1. Fetch Quiz Data & Calculate Time
   useEffect(() => {
     const startQuiz = async () => {
       try {
         const { data } = await api.post(endpoints.quiz.start(quizId));
         setQuestions(data.questions);
+        setQuizMeta(data.quiz);
 
-        // Calculate Time Remaining based on server-provided End Time
-        // This handles late joins correctly
+        // Calculate initial time remaining based on server End Time
         const endTime = new Date(data.quiz.endTime);
         const now = new Date();
         const diff = differenceInSeconds(endTime, now);
 
+        // Prevent negative time if user joins late
         setTimeLeft(diff > 0 ? diff : 0);
       } catch (err) {
-        alert(err.response?.data?.message || "Error starting quiz");
+        toast.error(err.response?.data?.message || "Error starting quiz");
         navigate("/dashboard");
       }
     };
     startQuiz();
   }, [quizId, navigate]);
 
-  // Global Timer (Counts down to zero)
+  // 2. Submission Logic
+  const submitQuiz = useCallback(
+    async (autoSubmit = false) => {
+      if (isSubmittingRef.current) return;
+      isSubmittingRef.current = true;
+      setIsSubmitting(true);
+
+      // Format answers for backend
+      const formattedAnswers = Object.entries(answers).map(([qId, val]) => ({
+        questionId: qId,
+        answer: val,
+      }));
+
+      // If auto-submitting, use a different toast message or none
+      let loadingToast;
+      if (!autoSubmit) {
+        loadingToast = toast.loading("Submitting quiz...");
+      } else {
+        toast("Time's up! Submitting...", { icon: "⏳" });
+      }
+
+      try {
+        await api.post(endpoints.quiz.submit(quizId), {
+          answers: formattedAnswers,
+        });
+
+        if (loadingToast) toast.success("Submitted!", { id: loadingToast });
+        navigate(`/result/${quizId}`);
+      } catch (err) {
+        console.error(err);
+        if (loadingToast)
+          toast.error("Submission failed", { id: loadingToast });
+
+        // Reset flags if it failed so they can try again (unless it was auto-submit, then we probably want to force exit)
+        if (!autoSubmit) {
+          isSubmittingRef.current = false;
+          setIsSubmitting(false);
+        }
+      }
+    },
+    [answers, quizId, navigate]
+  );
+
+  // 3. Timer Logic (Auto-Submit on 0)
   useEffect(() => {
-    if (timeLeft <= 0) return;
-    const timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
-    return () => clearInterval(timer);
-  }, [timeLeft]);
+    if (timeLeft === null) return; // Wait for fetch
 
-  const handleAnswer = (val) => {
-    setAnswers((prev) => ({
-      ...prev,
-      [questions[currentIndex]._id]: val,
-    }));
-  };
+    // FIX: If time is already up, trigger submit asynchronously to avoid React error
+    if (timeLeft <= 0) {
+      setTimeout(() => {
+        submitQuiz(true);
+      }, 0);
+      return;
+    }
 
-  const submitQuiz = async () => {
-    // Format answers for backend
-    const formattedAnswers = Object.entries(answers).map(([qId, val]) => ({
-      questionId: qId,
-      answer: val,
-    }));
-
-    try {
-      await api.post(endpoints.quiz.submit(quizId), {
-        answers: formattedAnswers,
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          // Calling submit here is safe because it's inside an interval callback (async)
+          submitQuiz(true);
+          return 0;
+        }
+        return prev - 1;
       });
-      navigate(`/result/${quizId}`);
-    } catch (err) {
-      console.error(err);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft, submitQuiz]);
+
+  // 4. Handle Selection/Input
+  const handleAnswer = (val, type) => {
+    // Prevent changing answers if submitting
+    if (isSubmitting) return;
+
+    const currentQId = questions[currentIndex]._id;
+
+    if (type === "multiple-correct") {
+      setAnswers((prev) => {
+        const currentArr = prev[currentQId] || [];
+        if (currentArr.includes(val)) {
+          return {
+            ...prev,
+            [currentQId]: currentArr.filter((item) => item !== val),
+          };
+        } else {
+          return { ...prev, [currentQId]: [...currentArr, val] };
+        }
+      });
+    } else {
+      setAnswers((prev) => ({
+        ...prev,
+        [currentQId]: val,
+      }));
     }
   };
 
-  if (questions.length === 0)
-    return <div className="p-10 text-center">Loading Quiz...</div>;
+  // 5. Render States
+  if (!questions.length || timeLeft === null) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
+        <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mb-4" />
+        <p className="text-gray-500 font-medium">Preparing your quiz...</p>
+      </div>
+    );
+  }
 
   const currentQ = questions[currentIndex];
+  const currentAnswer = answers[currentQ._id];
+  const progressPercentage = ((currentIndex + 1) / questions.length) * 100;
+
+  // Formatting Timer visual
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${String(s).padStart(2, "0")}`;
+  };
+
+  const isTimeCritical = timeLeft < 60; // Less than 1 min
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 flex flex-col items-center">
-      {/* Header */}
-      <div className="w-full max-w-3xl flex justify-between items-center mb-8 bg-white p-4 rounded-lg shadow-sm">
-        <span className="text-gray-500">
-          Question {currentIndex + 1}/{questions.length}
-        </span>
-        <div className="flex items-center gap-2 text-orange-600 font-bold">
-          <Timer size={20} />
-          {/* Global Timer Display */}
-          {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, "0")}
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Top Bar */}
+      <div className="bg-white border-b sticky top-0 z-10 shadow-sm">
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div>
+            <h1 className="font-bold text-gray-800 text-lg hidden md:block">
+              {quizMeta?.title || "Quiz"}
+            </h1>
+            <span className="text-xs text-gray-400 font-mono">
+              Q{currentIndex + 1} of {questions.length}
+            </span>
+          </div>
+
+          <div
+            className={`flex items-center gap-2 px-4 py-2 rounded-full font-mono font-bold transition-colors ${
+              isTimeCritical
+                ? "bg-red-50 text-red-600 border border-red-100 animate-pulse"
+                : "bg-blue-50 text-blue-600 border border-blue-100"
+            }`}
+          >
+            <Timer size={18} />
+            {formatTime(timeLeft)}
+          </div>
+        </div>
+        {/* Progress Bar */}
+        <div className="h-1 bg-gray-100 w-full">
+          <div
+            className="h-full bg-indigo-600 transition-all duration-300"
+            style={{ width: `${progressPercentage}%` }}
+          />
         </div>
       </div>
 
-      {/* Question Card */}
-      <div className="w-full max-w-3xl bg-white p-8 rounded-2xl shadow-sm">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">
-          {currentQ.questionText}
-        </h2>
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col items-center p-4 md:p-8 max-w-4xl mx-auto w-full">
+        <div className="w-full bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          {/* Question Header */}
+          <div className="p-6 md:p-8 border-b border-gray-100">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">
+                {currentQ.questionType.replace("-", " ")}
+              </span>
+              <span className="text-gray-400 text-xs font-medium">
+                {currentQ.points} Points
+              </span>
+            </div>
+            <h2 className="text-xl md:text-2xl font-bold text-gray-800 leading-snug">
+              {currentQ.questionText}
+            </h2>
+          </div>
 
-        {/* MCQ / Options */}
-        <div className="grid gap-3">
-          {currentQ.options?.map((opt, idx) => (
+          {/* Answer Area */}
+          <div className="p-6 md:p-8 bg-gray-50/50">
+            {/* MCQ / Options */}
+            {(currentQ.questionType === "mcq" ||
+              currentQ.questionType === "multiple-correct") && (
+              <div className="grid gap-3">
+                {currentQ.options?.map((opt, idx) => {
+                  const isSelected =
+                    currentQ.questionType === "multiple-correct"
+                      ? Array.isArray(currentAnswer) &&
+                        currentAnswer.includes(opt.text)
+                      : currentAnswer === opt.text;
+
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() =>
+                        handleAnswer(opt.text, currentQ.questionType)
+                      }
+                      disabled={isSubmitting}
+                      className={`relative p-4 text-left rounded-xl border-2 transition-all flex items-center justify-between group ${
+                        isSelected
+                          ? "border-indigo-600 bg-indigo-50 text-indigo-800 shadow-sm"
+                          : "border-gray-200 bg-white hover:border-indigo-300 hover:bg-white text-gray-700"
+                      } ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
+                    >
+                      <span className="font-medium">{opt.text}</span>
+                      {isSelected && (
+                        <CheckCircle2 className="text-indigo-600 w-5 h-5" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Fill in Blank / Descriptive */}
+            {(currentQ.questionType === "fill-blank" ||
+              currentQ.questionType === "descriptive") && (
+              <div className="space-y-2">
+                <textarea
+                  value={currentAnswer || ""}
+                  onChange={(e) => handleAnswer(e.target.value, "text")}
+                  disabled={isSubmitting}
+                  placeholder="Type your answer here..."
+                  className="w-full p-4 text-lg border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all resize-none bg-white min-h-[120px]"
+                />
+                <p className="text-xs text-gray-400 flex items-center gap-1">
+                  <AlertCircle size={12} />
+                  Your answer is saved automatically as you type.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Navigation Buttons */}
+        <div className="flex justify-between w-full mt-6">
+          <button
+            onClick={() => setCurrentIndex((prev) => prev - 1)}
+            disabled={currentIndex === 0 || isSubmitting}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl font-medium text-gray-600 hover:bg-white hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            <ChevronLeft size={20} /> Previous
+          </button>
+
+          {currentIndex === questions.length - 1 ? (
             <button
-              key={idx}
-              onClick={() => handleAnswer(opt.text)}
-              className={`p-4 text-left rounded-lg border-2 transition-all ${
-                answers[currentQ._id] === opt.text
-                  ? "border-blue-500 bg-blue-50 text-blue-700"
-                  : "border-gray-200 hover:border-blue-300"
-              }`}
+              onClick={() => submitQuiz(false)}
+              disabled={isSubmitting}
+              className="flex items-center gap-2 px-8 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 shadow-lg shadow-green-200 hover:shadow-green-300 transition-all disabled:opacity-70"
             >
-              {opt.text}
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="animate-spin" size={20} /> Sending...
+                </>
+              ) : (
+                <>
+                  Submit Quiz <Send size={18} />
+                </>
+              )}
             </button>
-          ))}
-
-          {currentQ.questionType === "fill-blank" && (
-            <input
-              type="text"
-              placeholder="Type your answer..."
-              className="w-full p-4 border-2 border-gray-200 rounded-lg focus:border-blue-500 outline-none"
-              onChange={(e) => handleAnswer(e.target.value)}
-            />
+          ) : (
+            <button
+              onClick={() => setCurrentIndex((prev) => prev + 1)}
+              disabled={isSubmitting}
+              className="flex items-center gap-2 px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200 hover:shadow-indigo-300 transition-all"
+            >
+              Next <ChevronRight size={20} />
+            </button>
           )}
         </div>
-      </div>
-
-      {/* Navigation */}
-      <div className="w-full max-w-3xl flex justify-between mt-8">
-        <button
-          disabled={currentIndex === 0}
-          onClick={() => setCurrentIndex((prev) => prev - 1)}
-          className="px-6 py-2 text-gray-600 disabled:opacity-50"
-        >
-          Previous
-        </button>
-
-        {currentIndex === questions.length - 1 ? (
-          <button
-            onClick={submitQuiz}
-            className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-bold shadow-lg shadow-green-200"
-          >
-            Submit Quiz
-          </button>
-        ) : (
-          <button
-            onClick={() => setCurrentIndex((prev) => prev + 1)}
-            className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-lg shadow-blue-200"
-          >
-            Next Question
-          </button>
-        )}
       </div>
     </div>
   );

@@ -25,16 +25,16 @@ export const endpoints = {
     getByCode: (code) => `/quizzes/code/${code}`,
     getById: (id) => `/quizzes/${id}`,
     update: (id) => `/quizzes/${id}`,
-
-    // *** ADD THIS LINE ***
     delete: (id) => `/quizzes/${id}`,
-
     join: "/quizzes/join",
     start: (id) => `/quizzes/${id}/start`,
     submit: (id) => `/quizzes/${id}/submit`,
     leaderboard: (id) => `/quizzes/${id}/leaderboard`,
     startLive: (id) => `/quizzes/${id}/start-live`,
     endLive: (id) => `/quizzes/${id}/end-live`,
+
+    // *** ADD THIS LINE HERE ***
+    attempt: (id) => `/quizzes/${id}/attempt`,
   },
   ai: {
     generate: "/ai/generate-questions",

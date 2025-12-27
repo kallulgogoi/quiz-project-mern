@@ -22,6 +22,8 @@ router.post("/:quizId/submit", quizController.submitAnswers);
 
 // Leaderboard
 router.get("/:quizId/leaderboard", quizController.getLeaderboard);
+//attempts
+router.get("/:quizId/attempt", quizController.getMyAttempt);
 
 // Host controls
 router.post("/:quizId/start-live", quizController.startQuizLive);

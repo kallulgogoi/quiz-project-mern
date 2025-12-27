@@ -301,37 +301,47 @@ exports.deleteQuiz = async (req, res) => {
   }
 };
 
-// Get User's Quizzes
+// Get User's Quizzes (UPDATED for Dashboard)
 exports.getUserQuizzes = async (req, res) => {
   try {
-    const { type } = req.query;
+    const { type } = req.query; // 'created' or 'participated'
 
     let quizzes;
 
     if (type === "created") {
+      // Fetch quizzes created by the user
       quizzes = await Quiz.find({ host: req.user._id })
         .sort({ createdAt: -1 })
         .populate("participants", "username profilePicture");
     } else if (type === "participated") {
+      // Fetch quizzes the user participated in
       const participation = await Participant.find({ user: req.user._id })
-        .sort({ lastAttemptAt: -1 })
-        .populate("quiz");
+        .sort({ createdAt: -1 }) // Sort by most recent attempt
+        .populate({
+          path: "quiz",
+          select: "title status startTime code duration", // Select specific fields
+        });
 
-      quizzes = participation.map((p) => p.quiz);
+      // Transform the data to include Quiz Details + My Result
+      quizzes = participation
+        .map((p) => {
+          if (!p.quiz) return null; // Skip if quiz was deleted
+          return {
+            _id: p.quiz._id,
+            title: p.quiz.title,
+            code: p.quiz.code,
+            startTime: p.quiz.startTime,
+            status: p.quiz.status,
+            // User's specific result data
+            score: p.totalScore || 0,
+            rank: p.rank || "-",
+            completed: p.completed,
+            dateTaken: p.createdAt,
+          };
+        })
+        .filter((q) => q !== null); // Filter out nulls
     } else {
-      const created = await Quiz.find({ host: req.user._id });
-      const participated = await Participant.find({
-        user: req.user._id,
-      }).populate("quiz");
-
-      quizzes = {
-        created,
-        participated: participated.map((p) => ({
-          quiz: p.quiz,
-          score: p.totalScore,
-          rank: p.rank,
-        })),
-      };
+      quizzes = [];
     }
 
     res.json({
@@ -347,7 +357,7 @@ exports.getUserQuizzes = async (req, res) => {
   }
 };
 
-// Start Quiz (for participants) -- FIXED E11000 ERROR HERE
+// Start Quiz (for participants)
 exports.startQuiz = async (req, res) => {
   try {
     const { quizId } = req.params;
@@ -398,9 +408,7 @@ exports.startQuiz = async (req, res) => {
         });
       }
 
-      // RACE CONDITION FIX:
-      // Only increment attempt count if the previous attempt was effectively in the past (> 5 sec ago).
-      // This prevents double counting when React Strict Mode calls this API twice instantly.
+      // Race condition Fix
       const lastStarted = existingAttempt.startedAt
         ? new Date(existingAttempt.startedAt).getTime()
         : 0;
@@ -418,12 +426,10 @@ exports.startQuiz = async (req, res) => {
           quiz: quizId,
           user: req.user._id,
           startedAt: now,
-          attemptCount: 1, // Initialize count
+          attemptCount: 1,
         });
       } catch (error) {
-        // Handle E11000 Duplicate Key Error (Race Condition)
-        // If code is 11000, it means the record was created by a parallel request (ms ago).
-        // We safely ignore it and proceed to return the questions.
+        // Handle race condition (Duplicate key)
         if (error.code !== 11000) {
           throw error;
         }
@@ -777,11 +783,46 @@ exports.getQuizById = async (req, res) => {
         .status(403)
         .json({ success: false, message: "Unauthorized access" });
     }
-    // ----------------------------------
 
     res.json({ success: true, quiz });
   } catch (error) {
     console.error("Get quiz by ID error:", error);
     res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+//
+exports.getMyAttempt = async (req, res) => {
+  try {
+    const { quizId } = req.params;
+
+    // Find the participant record for this user and quiz
+    const participant = await Participant.findOne({
+      quiz: quizId,
+      user: req.user._id,
+    })
+      .populate("quiz", "title description duration startTime") // Get basic quiz info
+      .populate({
+        path: "answers.question", // Populate the question details inside the answers array
+        model: "Question",
+      });
+
+    if (!participant) {
+      return res.status(404).json({
+        success: false,
+        message: "Attempt details not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      attempt: participant,
+    });
+  } catch (error) {
+    console.error("Get my attempt error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch attempt details",
+    });
   }
 };
