@@ -23,16 +23,8 @@ const generateUniqueCode = async () => {
 // Create Quiz
 exports.createQuiz = async (req, res) => {
   try {
-    const {
-      title,
-      description,
-      startTime,
-      // endTime removed from input
-      duration,
-      settings = {},
-    } = req.body;
+    const { title, description, startTime, duration, settings = {} } = req.body;
 
-    // Validate times
     const start = new Date(startTime);
     const now = new Date();
 
@@ -54,10 +46,8 @@ exports.createQuiz = async (req, res) => {
     const durationInMs = parseInt(duration) * 60 * 1000;
     const end = new Date(start.getTime() + durationInMs);
 
-    // Generate unique code
     const code = await generateUniqueCode();
 
-    // Create quiz
     const quiz = new Quiz({
       title,
       description,
@@ -79,7 +69,6 @@ exports.createQuiz = async (req, res) => {
 
     await quiz.save();
 
-    // Add to user's created quizzes
     await User.findByIdAndUpdate(req.user._id, {
       $push: { quizzesCreated: quiz._id },
     });
@@ -122,7 +111,6 @@ exports.getQuizByCode = async (req, res) => {
       });
     }
 
-    // Check if user can access the quiz
     const canAccess =
       quiz.host._id.toString() === req.user._id.toString() ||
       quiz.participants.some(
@@ -162,7 +150,6 @@ exports.joinQuiz = async (req, res) => {
       });
     }
 
-    // Check if quiz has ended
     if (quiz.status === "completed") {
       return res.status(400).json({
         success: false,
@@ -170,7 +157,6 @@ exports.joinQuiz = async (req, res) => {
       });
     }
 
-    // Check if already joined
     const alreadyJoined = quiz.participants.includes(req.user._id);
     if (alreadyJoined) {
       return res.status(400).json({
@@ -179,11 +165,9 @@ exports.joinQuiz = async (req, res) => {
       });
     }
 
-    // Add user to participants
     quiz.participants.push(req.user._id);
     await quiz.save();
 
-    // Add to user's participated quizzes
     await User.findByIdAndUpdate(req.user._id, {
       $push: {
         quizzesParticipated: {
@@ -228,7 +212,6 @@ exports.updateQuiz = async (req, res) => {
       });
     }
 
-    // Check if user is host
     if (quiz.host.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
@@ -236,7 +219,6 @@ exports.updateQuiz = async (req, res) => {
       });
     }
 
-    // Prevent updating if quiz has started
     if (quiz.status === "active" || quiz.status === "completed") {
       return res.status(400).json({
         success: false,
@@ -244,15 +226,12 @@ exports.updateQuiz = async (req, res) => {
       });
     }
 
-    // Update quiz fields
     Object.keys(updates).forEach((key) => {
-      // Don't allow manual endTime update via this route
       if (key !== "endTime") {
         quiz[key] = updates[key];
       }
     });
 
-    // Recalculate End Time if start or duration changed
     if (updates.startTime || updates.duration) {
       const start = new Date(quiz.startTime);
       const durationInMs = quiz.duration * 60 * 1000;
@@ -288,7 +267,6 @@ exports.deleteQuiz = async (req, res) => {
       });
     }
 
-    // Check if user is host
     if (quiz.host.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
@@ -296,24 +274,18 @@ exports.deleteQuiz = async (req, res) => {
       });
     }
 
-    // Delete related questions
     await Question.deleteMany({ quiz: quizId });
-
-    // Delete participant records
     await Participant.deleteMany({ quiz: quizId });
 
-    // Remove from user's created quizzes
     await User.findByIdAndUpdate(req.user._id, {
       $pull: { quizzesCreated: quizId },
     });
 
-    // Remove from participants' records
     await User.updateMany(
       { "quizzesParticipated.quiz": quizId },
       { $pull: { quizzesParticipated: { quiz: quizId } } }
     );
 
-    // Delete quiz
     await Quiz.findByIdAndDelete(quizId);
 
     res.json({
@@ -332,7 +304,7 @@ exports.deleteQuiz = async (req, res) => {
 // Get User's Quizzes
 exports.getUserQuizzes = async (req, res) => {
   try {
-    const { type } = req.query; // 'created' or 'participated'
+    const { type } = req.query;
 
     let quizzes;
 
@@ -375,7 +347,7 @@ exports.getUserQuizzes = async (req, res) => {
   }
 };
 
-// Start Quiz (for participants)
+// Start Quiz (for participants) -- FIXED E11000 ERROR HERE
 exports.startQuiz = async (req, res) => {
   try {
     const { quizId } = req.params;
@@ -388,7 +360,6 @@ exports.startQuiz = async (req, res) => {
       });
     }
 
-    // Check if user has joined
     const hasJoined = quiz.participants.includes(req.user._id);
     if (!hasJoined) {
       return res.status(403).json({
@@ -399,7 +370,6 @@ exports.startQuiz = async (req, res) => {
 
     const now = new Date();
 
-    // If quiz is scheduled, check start time
     if (quiz.status === "scheduled" && now < quiz.startTime) {
       return res.status(400).json({
         success: false,
@@ -407,7 +377,6 @@ exports.startQuiz = async (req, res) => {
       });
     }
 
-    // If quiz is completed or time passed
     if (quiz.status === "completed" || now > quiz.endTime) {
       return res.status(400).json({
         success: false,
@@ -429,24 +398,41 @@ exports.startQuiz = async (req, res) => {
         });
       }
 
-      // Update attempt count
-      existingAttempt.attemptCount += 1;
-      existingAttempt.startedAt = now;
-      existingAttempt.completed = false;
-      await existingAttempt.save();
+      // RACE CONDITION FIX:
+      // Only increment attempt count if the previous attempt was effectively in the past (> 5 sec ago).
+      // This prevents double counting when React Strict Mode calls this API twice instantly.
+      const lastStarted = existingAttempt.startedAt
+        ? new Date(existingAttempt.startedAt).getTime()
+        : 0;
+      const timeSinceStart = Date.now() - lastStarted;
+
+      if (timeSinceStart > 5000 || existingAttempt.completed) {
+        existingAttempt.attemptCount += 1;
+        existingAttempt.startedAt = now;
+        existingAttempt.completed = false;
+        await existingAttempt.save();
+      }
     } else {
-      // Create new participant record
-      await Participant.create({
-        quiz: quizId,
-        user: req.user._id,
-        startedAt: now,
-      });
+      try {
+        await Participant.create({
+          quiz: quizId,
+          user: req.user._id,
+          startedAt: now,
+          attemptCount: 1, // Initialize count
+        });
+      } catch (error) {
+        // Handle E11000 Duplicate Key Error (Race Condition)
+        // If code is 11000, it means the record was created by a parallel request (ms ago).
+        // We safely ignore it and proceed to return the questions.
+        if (error.code !== 11000) {
+          throw error;
+        }
+      }
     }
 
-    // Get questions (shuffle if enabled)
     let questions = await Question.find({ quiz: quizId })
       .sort({ order: 1 })
-      .select("-correctAnswers -explanation"); // Don't send answers to participant
+      .select("-correctAnswers -explanation");
 
     if (quiz.settings.shuffleQuestions) {
       questions = questions.sort(() => Math.random() - 0.5);
@@ -459,7 +445,7 @@ exports.startQuiz = async (req, res) => {
         id: quiz._id,
         title: quiz.title,
         duration: quiz.duration,
-        endTime: quiz.endTime, // Send this for countdown
+        endTime: quiz.endTime,
       },
       questions,
       settings: quiz.settings,
@@ -487,9 +473,7 @@ exports.submitAnswers = async (req, res) => {
       });
     }
 
-    // Check if quiz is still active
     const now = new Date();
-    // Allow a small buffer (e.g. 10 seconds) for network latency
     if (now > new Date(quiz.endTime).getTime() + 10000) {
       return res.status(400).json({
         success: false,
@@ -497,7 +481,6 @@ exports.submitAnswers = async (req, res) => {
       });
     }
 
-    // Get participant record
     let participant = await Participant.findOne({
       quiz: quizId,
       user: req.user._id,
@@ -517,7 +500,6 @@ exports.submitAnswers = async (req, res) => {
       });
     }
 
-    // Calculate score
     let totalScore = 0;
     const answerRecords = [];
 
@@ -577,7 +559,6 @@ exports.submitAnswers = async (req, res) => {
       });
     }
 
-    // Update participant record
     participant.answers = answerRecords;
     participant.totalScore = totalScore;
     participant.timeTaken = answerRecords.reduce(
@@ -588,7 +569,6 @@ exports.submitAnswers = async (req, res) => {
     participant.finishedAt = now;
     await participant.save();
 
-    // Calculate rank
     const participants = await Participant.find({
       quiz: quizId,
       completed: true,
@@ -599,7 +579,6 @@ exports.submitAnswers = async (req, res) => {
     participant.rank = rank;
     await participant.save();
 
-    // Update user's participated quizzes with score
     await User.updateOne(
       {
         _id: req.user._id,
@@ -613,7 +592,6 @@ exports.submitAnswers = async (req, res) => {
       }
     );
 
-    // Notify Live Dashboard
     const io = req.app.get("io");
     if (io) {
       io.to(`quiz-${quizId}`).emit("leaderboard-update", {
@@ -644,7 +622,7 @@ exports.submitAnswers = async (req, res) => {
   }
 };
 
-// Get Quiz Leaderboard
+// Get Leaderboard
 exports.getLeaderboard = async (req, res) => {
   try {
     const { quizId } = req.params;
@@ -657,7 +635,6 @@ exports.getLeaderboard = async (req, res) => {
       });
     }
 
-    // Check if user can view leaderboard
     const canView =
       quiz.host.toString() === req.user._id.toString() ||
       quiz.participants.includes(req.user._id);
@@ -675,7 +652,7 @@ exports.getLeaderboard = async (req, res) => {
     })
       .sort({ totalScore: -1, timeTaken: 1 })
       .populate("user", "username profilePicture")
-      .limit(50); // Limit to top 50
+      .limit(50);
 
     res.json({
       success: true,
@@ -707,7 +684,6 @@ exports.startQuizLive = async (req, res) => {
       return res.status(403).json({ success: false, message: "Unauthorized" });
     }
 
-    // FORCE START: Update Start Time to NOW and Recalculate End Time
     const now = new Date();
     const durationInMs = quiz.duration * 60 * 1000;
 
@@ -717,7 +693,6 @@ exports.startQuizLive = async (req, res) => {
 
     await quiz.save();
 
-    // Notify all participants
     io.to(`quiz-${quizId}`).emit("quiz-started", {
       quizId,
       startTime: quiz.startTime,
@@ -748,7 +723,6 @@ exports.endQuizLive = async (req, res) => {
       });
     }
 
-    // Check if user is host
     if (quiz.host.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
@@ -756,12 +730,10 @@ exports.endQuizLive = async (req, res) => {
       });
     }
 
-    // Update quiz status to completed
     quiz.status = "completed";
     quiz.endTime = new Date();
     await quiz.save();
 
-    // Notify all participants via Socket.io
     io.to(`quiz-${quizId}`).emit("quiz-ended", {
       quizId,
       endTime: new Date(),
@@ -780,7 +752,7 @@ exports.endQuizLive = async (req, res) => {
   }
 };
 
-// Get Quiz By ID (for management/host)
+// Get Quiz By ID (UPDATED to allow participants)
 exports.getQuizById = async (req, res) => {
   try {
     const { quizId } = req.params;
@@ -794,12 +766,18 @@ exports.getQuizById = async (req, res) => {
         .json({ success: false, message: "Quiz not found" });
     }
 
-    // Security check: Only the host can access this view
-    if (quiz.host.toString() !== req.user._id.toString()) {
+    // --- CHECK: HOST OR PARTICIPANT ---
+    const isHost = quiz.host.toString() === req.user._id.toString();
+    const isParticipant = quiz.participants.some(
+      (p) => p._id.toString() === req.user._id.toString()
+    );
+
+    if (!isHost && !isParticipant) {
       return res
         .status(403)
         .json({ success: false, message: "Unauthorized access" });
     }
+    // ----------------------------------
 
     res.json({ success: true, quiz });
   } catch (error) {

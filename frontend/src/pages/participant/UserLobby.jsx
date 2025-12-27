@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSocket } from "../../context/SocketContext";
 import { useAuth } from "../../context/AuthContext";
+import api, { endpoints } from "../../api/axios"; // Import API
 import { Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function UserLobby() {
   const { quizId } = useParams();
@@ -12,18 +14,46 @@ export default function UserLobby() {
   const [status, setStatus] = useState("Waiting for host to start...");
 
   useEffect(() => {
+    // 1. Check status immediately via API (Handles late joins/refreshes)
+    const checkQuizStatus = async () => {
+      try {
+        // We need a public or participant-accessible endpoint to check status
+        // reusing getQuizByCode or create a specific status endpoint is best.
+        // For now, let's try the join endpoint or getById if allowed.
+        // Assuming we can just try to "start" it to see if it's active,
+        // or better: fetch details.
+
+        // Note: You might need to adjust your backend to allow getting basic quiz info
+        // (like status) without being the host.
+        // If getQuizById is restricted, you might need a lightweight endpoint.
+        // But usually, if you joined, you can fetch it.
+
+        const { data } = await api.get(endpoints.quiz.getById(quizId));
+        if (data.quiz.status === "active") {
+          toast.success("Quiz is already live! Joining now...");
+          navigate(`/take-quiz/${quizId}`);
+        }
+      } catch (err) {
+        console.error("Status check failed", err);
+      }
+    };
+
+    checkQuizStatus();
+
     if (!socket) return;
 
-    // Join the socket room
-    socket.emit("join-quiz", quizId);
+    // 2. Join the socket room
+    socket.emit("join-quiz-room", quizId); // Make sure this matches server: socket.on("join-quiz-room")
 
-    // Listen for start event
-    socket.on("quiz-start", () => {
+    // 3. Listen for start event
+    // FIXED: Changed from 'quiz-start' to 'quiz-started' to match Controller
+    socket.on("quiz-started", () => {
+      toast.success("Host started the quiz!");
       navigate(`/take-quiz/${quizId}`);
     });
 
     return () => {
-      socket.off("quiz-start");
+      socket.off("quiz-started");
     };
   }, [socket, quizId, navigate]);
 
