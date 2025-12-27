@@ -9,11 +9,14 @@ import {
   Loader2,
   Lock,
   ShieldCheck,
+  ArrowLeft,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
 export default function Profile() {
   const { user, setUser } = useAuth();
+  const navigate = useNavigate();
 
   // Profile State
   const [loadingProfile, setLoadingProfile] = useState(false);
@@ -69,7 +72,7 @@ export default function Profile() {
     }
   };
 
-  // --- Password Logic ---
+  //  Password Logic
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     if (passData.newPassword !== passData.confirmPassword) {
@@ -99,182 +102,206 @@ export default function Profile() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-8">
-      <h1 className="text-3xl font-bold text-gray-800">Account Settings</h1>
-
-      <div className="grid md:grid-cols-2 gap-8">
-        {/* LEFT COLUMN: Profile Details */}
-        <div className="bg-white rounded-2xl shadow-sm border p-6 h-fit">
-          <h2 className="text-xl font-bold text-gray-700 mb-6 flex items-center gap-2">
-            <User className="text-blue-600" /> Personal Info
-          </h2>
-
-          <form onSubmit={handleProfileSubmit}>
-            {/* Image Upload */}
-            <div className="flex flex-col items-center mb-6">
-              <div className="relative group cursor-pointer">
-                <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-gray-100 shadow-sm">
-                  {imagePreview ? (
-                    <img
-                      src={imagePreview}
-                      alt="Profile"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400">
-                      <User size={40} />
-                    </div>
-                  )}
-                </div>
-                <label className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
-                  <Camera size={20} />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleImageChange}
-                  />
-                </label>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-gray-700">
-                  Username
-                </label>
-                <input
-                  type="text"
-                  value={formData.username}
-                  onChange={(e) =>
-                    setFormData({ ...formData, username: e.target.value })
-                  }
-                  className="w-full mt-1 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">
-                  Email
-                </label>
-                <div className="relative mt-1">
-                  <Mail
-                    size={16}
-                    className="absolute left-3 top-3.5 text-gray-400"
-                  />
-                  <input
-                    type="email"
-                    value={formData.email}
-                    disabled
-                    className="w-full pl-9 p-3 border rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loadingProfile}
-              className="w-full mt-6 bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition flex items-center justify-center gap-2"
-            >
-              {loadingProfile ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                <>
-                  <Save size={18} /> Save Profile
-                </>
-              )}
-            </button>
-          </form>
+    <div className="min-h-screen bg-gray-50 p-6 md:p-10">
+      <div className="max-w-5xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-8">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">
+              Account Settings
+            </h1>
+            <p className="text-gray-500 text-sm">
+              Manage your personal information and security
+            </p>
+          </div>
         </div>
 
-        {/* RIGHT COLUMN: Change Password */}
-        <div className="bg-white rounded-2xl shadow-sm border p-6 h-fit">
-          <h2 className="text-xl font-bold text-gray-700 mb-6 flex items-center gap-2">
-            <ShieldCheck className="text-green-600" /> Security
-          </h2>
-
-          <form onSubmit={handlePasswordSubmit} className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700">
-                Current Password
-              </label>
-              <div className="relative mt-1">
-                <Lock
-                  size={16}
-                  className="absolute left-3 top-3.5 text-gray-400"
-                />
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  value={passData.currentPassword}
-                  onChange={(e) =>
-                    setPassData({
-                      ...passData,
-                      currentPassword: e.target.value,
-                    })
-                  }
-                  className="w-full pl-9 p-3 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                />
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* LEFT COLUMN: Profile Details */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 h-fit transition-shadow hover:shadow-lg">
+            <h2 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2 pb-4 border-b border-gray-100">
+              <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                <User size={20} />
               </div>
-            </div>
+              Personal Information
+            </h2>
 
-            <div>
-              <label className="text-sm font-medium text-gray-700">
-                New Password
-              </label>
-              <div className="relative mt-1">
-                <Lock
-                  size={16}
-                  className="absolute left-3 top-3.5 text-gray-400"
-                />
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  value={passData.newPassword}
-                  onChange={(e) =>
-                    setPassData({ ...passData, newPassword: e.target.value })
-                  }
-                  className="w-full pl-9 p-3 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                />
+            <form onSubmit={handleProfileSubmit}>
+              {/* Image Upload */}
+              <div className="flex flex-col items-center mb-8">
+                <div className="relative group cursor-pointer">
+                  <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-lg ring-4 ring-gray-50 transition-all group-hover:ring-blue-50">
+                    {imagePreview ? (
+                      <img
+                        src={imagePreview}
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-gray-400">
+                        <User size={48} />
+                      </div>
+                    )}
+                  </div>
+                  <label className="absolute inset-0 flex items-center justify-center bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-all rounded-full backdrop-blur-sm cursor-pointer">
+                    <div className="flex flex-col items-center gap-1">
+                      <Camera size={24} />
+                      <span className="text-xs font-medium">Change</span>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageChange}
+                    />
+                  </label>
+                </div>
               </div>
-            </div>
 
-            <div>
-              <label className="text-sm font-medium text-gray-700">
-                Confirm New Password
-              </label>
-              <div className="relative mt-1">
-                <Lock
-                  size={16}
-                  className="absolute left-3 top-3.5 text-gray-400"
-                />
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  value={passData.confirmPassword}
-                  onChange={(e) =>
-                    setPassData({
-                      ...passData,
-                      confirmPassword: e.target.value,
-                    })
-                  }
-                  className="w-full pl-9 p-3 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                />
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    Username
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.username}
+                    onChange={(e) =>
+                      setFormData({ ...formData, username: e.target.value })
+                    }
+                    className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    Email Address
+                  </label>
+                  <div className="relative">
+                    <Mail
+                      size={18}
+                      className="absolute left-3.5 top-3.5 text-gray-400"
+                    />
+                    <input
+                      type="email"
+                      value={formData.email}
+                      disabled
+                      className="w-full pl-10 p-3.5 bg-gray-100/50 border border-gray-200 rounded-xl text-gray-500 cursor-not-allowed"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1.5 ml-1">
+                    Email cannot be changed
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <button
-              type="submit"
-              disabled={loadingPassword}
-              className="w-full mt-6 bg-gray-800 text-white py-3 rounded-lg font-bold hover:bg-gray-900 transition flex items-center justify-center gap-2"
-            >
-              {loadingPassword ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                "Update Password"
-              )}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={loadingProfile}
+                className="w-full mt-8 bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200 flex items-center justify-center gap-2 disabled:opacity-70"
+              >
+                {loadingProfile ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  <>
+                    <Save size={18} /> Save Changes
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+
+          {/* RIGHT COLUMN: Change Password */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 h-fit transition-shadow hover:shadow-lg">
+            <h2 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2 pb-4 border-b border-gray-100">
+              <div className="p-2 bg-green-50 text-green-600 rounded-lg">
+                <ShieldCheck size={20} />
+              </div>
+              Security & Password
+            </h2>
+
+            <form onSubmit={handlePasswordSubmit} className="space-y-5">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  Current Password
+                </label>
+                <div className="relative">
+                  <Lock
+                    size={18}
+                    className="absolute left-3.5 top-3.5 text-gray-400"
+                  />
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    value={passData.currentPassword}
+                    onChange={(e) =>
+                      setPassData({
+                        ...passData,
+                        currentPassword: e.target.value,
+                      })
+                    }
+                    className="w-full pl-10 p-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-green-100 focus:border-green-500 outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  New Password
+                </label>
+                <div className="relative">
+                  <Lock
+                    size={18}
+                    className="absolute left-3.5 top-3.5 text-gray-400"
+                  />
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    value={passData.newPassword}
+                    onChange={(e) =>
+                      setPassData({ ...passData, newPassword: e.target.value })
+                    }
+                    className="w-full pl-10 p-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-green-100 focus:border-green-500 outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  Confirm New Password
+                </label>
+                <div className="relative">
+                  <Lock
+                    size={18}
+                    className="absolute left-3.5 top-3.5 text-gray-400"
+                  />
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    value={passData.confirmPassword}
+                    onChange={(e) =>
+                      setPassData({
+                        ...passData,
+                        confirmPassword: e.target.value,
+                      })
+                    }
+                    className="w-full pl-10 p-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-green-100 focus:border-green-500 outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loadingPassword}
+                className="w-full mt-8 bg-gray-900 text-white py-3.5 rounded-xl font-bold hover:bg-black transition shadow-lg shadow-gray-200 flex items-center justify-center gap-2 disabled:opacity-70"
+              >
+                {loadingPassword ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  "Update Password"
+                )}
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     </div>

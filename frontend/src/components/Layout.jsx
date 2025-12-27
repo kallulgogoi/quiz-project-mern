@@ -1,5 +1,6 @@
+// components/Layout.jsx
 import { useState } from "react";
-import { Outlet, useNavigate, Link, useLocation } from "react-router-dom";
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   LogOut,
@@ -8,6 +9,8 @@ import {
   X,
   LayoutDashboard,
   UserCircle,
+  PencilRuler,
+  Trophy,
 } from "lucide-react";
 
 export default function Layout() {
@@ -24,43 +27,67 @@ export default function Layout() {
 
   const closeMenu = () => setIsMobileMenuOpen(false);
 
-  // Helper to check active link
-  const isActive = (path) => location.pathname === path;
+  // Correct active state logic
+  const isActive = (path) => {
+    if (path === "/") {
+      return location.pathname === "/";
+    }
+    return location.pathname.startsWith(path);
+  };
+
+  const navItems = [
+    { path: "/", label: "Dashboard", icon: <LayoutDashboard size={20} /> },
+    {
+      path: "/created-quizzes",
+      label: "My Quizzes",
+      icon: <PencilRuler size={20} />,
+    },
+    {
+      path: "/participated-quizzes",
+      label: "Game History",
+      icon: <Trophy size={20} />,
+    },
+    { path: "/profile", label: "Profile", icon: <UserCircle size={20} /> },
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans">
+    <div className="min-h-screen bg-slate-50 font-sans">
       {/* Navbar */}
-      <nav className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-50">
-        <div className="flex justify-between items-center">
+      <nav className="bg-white/90 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
           {/* Logo */}
           <Link
             to="/"
             onClick={closeMenu}
-            className="text-2xl font-bold text-blue-600 tracking-tight"
+            className="text-3xl font-black tracking-tight bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent"
           >
             QuizMaster
           </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-6">
-            <Link
-              to="/"
-              className={`font-medium transition-colors ${
-                isActive("/")
-                  ? "text-blue-600"
-                  : "text-gray-600 hover:text-blue-600"
-              }`}
-            >
-              Dashboard
-            </Link>
-
-            <div className="flex items-center gap-3 pl-6 border-l border-gray-200">
+          {/* Desktop Nav */}
+          <div className="hidden md:flex items-center gap-1 bg-slate-100/70 p-1.5 rounded-2xl shadow-inner">
+            {navItems.map((item) => (
               <Link
-                to="/profile"
-                className="flex items-center gap-2 hover:opacity-80 transition-opacity group"
-                title="View Profile"
+                key={item.path}
+                to={item.path}
+                className={`flex items-center gap-3 px-6 py-3 rounded-xl font-medium transition-all duration-300 ${
+                  isActive(item.path)
+                    ? "bg-white text-indigo-600 shadow-md"
+                    : "text-slate-600 hover:text-indigo-600 hover:bg-white/60"
+                }`}
               >
-                <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold overflow-hidden border border-blue-200 group-hover:border-blue-400 transition-colors">
+                {item.icon}
+                <span>{item.label}</span>
+              </Link>
+            ))}
+
+            {/* User Section */}
+            <div className="ml-4 pl-4 border-l border-slate-300 flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg overflow-hidden"
+                  title={user?.username}
+                >
                   {user?.profilePicture ? (
                     <img
                       src={user.profilePicture}
@@ -68,17 +95,17 @@ export default function Layout() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    user?.username?.[0]?.toUpperCase() || <User size={16} />
+                    user?.username?.[0]?.toUpperCase() || <User size={20} />
                   )}
                 </div>
-                <span className="hidden lg:block font-medium text-gray-700 group-hover:text-blue-600 transition-colors">
+                <span className="font-semibold text-slate-800 hidden lg:block">
                   {user?.username}
                 </span>
-              </Link>
+              </div>
 
               <button
                 onClick={handleLogout}
-                className="p-2 hover:bg-red-50 text-gray-500 hover:text-red-600 rounded-lg transition-colors ml-2"
+                className="p-2.5 bg-red-100 text-red-600 rounded-xl hover:bg-red-200 hover:scale-110 transition-all duration-200 shadow-sm"
                 title="Logout"
               >
                 <LogOut size={20} />
@@ -86,54 +113,65 @@ export default function Layout() {
             </div>
           </div>
 
-          {/* Mobile Menu Button */}
+          {/* Mobile Menu Toggle */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+            className="md:hidden p-3 bg-slate-100 rounded-xl text-slate-700 hover:bg-slate-200 transition"
           >
             {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
 
-        {/* Mobile Dropdown Menu */}
+        {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden pt-4 pb-2 border-t mt-4 space-y-2 animate-fade-in-down">
-            <Link
-              to="/"
-              onClick={closeMenu}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg ${
-                isActive("/")
-                  ? "bg-blue-50 text-blue-600"
-                  : "text-gray-700 hover:bg-gray-50"
-              }`}
-            >
-              <LayoutDashboard size={20} /> Dashboard
-            </Link>
+          <div className="md:hidden mt-4 pb-4">
+            <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+              <div className="p-4 space-y-1">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={closeMenu}
+                    className={`flex items-center gap-4 px-5 py-4 rounded-2xl font-medium transition-all ${
+                      isActive(item.path)
+                        ? "bg-indigo-100 text-indigo-700 shadow-sm"
+                        : "text-slate-700 hover:bg-slate-100"
+                    }`}
+                  >
+                    {item.icon}
+                    <span className="text-lg">{item.label}</span>
+                  </Link>
+                ))}
 
-            <Link
-              to="/profile"
-              onClick={closeMenu}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg ${
-                isActive("/profile")
-                  ? "bg-blue-50 text-blue-600"
-                  : "text-gray-700 hover:bg-gray-50"
-              }`}
-            >
-              <UserCircle size={20} /> My Profile
-            </Link>
+                <div className="pt-4 border-t border-slate-200">
+                  <div className="flex items-center gap-4 px-5 py-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                      {user?.username?.[0]?.toUpperCase() || <User size={24} />}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-slate-800">
+                        {user?.username}
+                      </p>
+                      <p className="text-sm text-slate-500">View profile</p>
+                    </div>
+                  </div>
 
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 text-left"
-            >
-              <LogOut size={20} /> Logout
-            </button>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center justify-center gap-3 px-5 py-4 mt-2 bg-red-100 text-red-600 rounded-2xl font-semibold hover:bg-red-200 transition"
+                  >
+                    <LogOut size={22} />
+                    Logout
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </nav>
 
       {/* Page Content */}
-      <main>
+      <main className="pb-10">
         <Outlet />
       </main>
     </div>

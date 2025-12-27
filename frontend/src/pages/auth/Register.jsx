@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api, { endpoints } from "../../api/axios";
 import toast from "react-hot-toast";
+import { User, Mail, Lock, UserPlus, Loader2 } from "lucide-react";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -10,75 +11,168 @@ export default function Register() {
     email: "",
     password: "",
   });
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
     try {
       await api.post(endpoints.auth.register, formData);
       toast.success("Registration successful! Please verify your email.");
-      // Redirect to OTP verification with email pre-filled
       navigate("/verify-otp", { state: { email: formData.email } });
     } catch (err) {
       toast.error(err.response?.data?.message || "Registration failed");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-      <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
-          Create Account
-        </h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Username
-            </label>
-            <input
-              type="text"
-              required
-              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              onChange={(e) =>
-                setFormData({ ...formData, username: e.target.value })
-              }
-            />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md">
+        {/* Same width as Login page: max-w-md */}
+        <div className="bg-white rounded-2xl shadow-xl p-8 md:p-10">
+          {/* Logo & Title – exactly like Login */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-14 h-14 bg-slate-900 rounded-2xl mb-4">
+              <UserPlus size={28} className="text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-slate-900">
+              Create Account
+            </h1>
+            <p className="text-slate-600 mt-2">Join QuizMaster today</p>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              required
-              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              onChange={(e) =>
-                setFormData({ ...formData, email: e.target.value })
-              }
-            />
+
+          {/* Form – same spacing and style as Login */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Username */}
+            <div>
+              <label
+                htmlFor="username"
+                className="block text-sm font-medium text-slate-700 mb-2"
+              >
+                Username
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <User size={20} className="text-slate-400" />
+                </div>
+                <input
+                  id="username"
+                  type="text"
+                  required
+                  disabled={isLoading}
+                  placeholder="johndoe"
+                  className="w-full pl-12 pr-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition disabled:opacity-70"
+                  value={formData.username}
+                  onChange={(e) =>
+                    setFormData({ ...formData, username: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+
+            {/* Email */}
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-slate-700 mb-2"
+              >
+                Email Address
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Mail size={20} className="text-slate-400" />
+                </div>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  disabled={isLoading}
+                  placeholder="you@example.com"
+                  className="w-full pl-12 pr-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition disabled:opacity-70"
+                  value={formData.email}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+
+            {/* Password */}
+            <div>
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-slate-700 mb-2"
+              >
+                Password
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Lock size={20} className="text-slate-400" />
+                </div>
+                <input
+                  id="password"
+                  type="password"
+                  required
+                  disabled={isLoading}
+                  placeholder="••••••••"
+                  className="w-full pl-12 pr-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition disabled:opacity-70"
+                  value={formData.password}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+
+            {/* Submit Button with Loading State */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-slate-900 text-white font-semibold py-3.5 rounded-xl hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 transition transform hover:-translate-y-0.5 shadow-lg disabled:opacity-80"
+            >
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 size={20} className="animate-spin" />
+                  Creating Account...
+                </span>
+              ) : (
+                "Sign Up"
+              )}
+            </button>
+          </form>
+
+          {/* Login Link – same as Login page */}
+          <div className="mt-8 text-center">
+            <p className="text-sm text-slate-600">
+              Already have an account?{" "}
+              <Link
+                to="/login"
+                className="font-semibold text-slate-900 hover:text-slate-700 transition"
+              >
+                Sign in
+              </Link>
+            </p>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <input
-              type="password"
-              required
-              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              onChange={(e) =>
-                setFormData({ ...formData, password: e.target.value })
-              }
-            />
+
+          {/* Back to Home */}
+          <div className="mt-6 text-center">
+            <Link
+              to="/"
+              className="text-sm text-slate-500 hover:text-slate-700 transition"
+            >
+              ← Back to home
+            </Link>
           </div>
-          <button className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-medium transition">
-            Sign Up
-          </button>
-        </form>
-        <p className="mt-4 text-center text-sm text-gray-600">
-          Already have an account?{" "}
-          <Link to="/login" className="text-blue-600 hover:underline">
-            Login
-          </Link>
-        </p>
+        </div>
+
+        {/* Small footer */}
+        <div className="text-center mt-8">
+          <p className="text-xs text-slate-500">
+            © {new Date().getFullYear()} QuizMaster. All rights reserved.
+          </p>
+        </div>
       </div>
     </div>
   );

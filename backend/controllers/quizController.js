@@ -304,56 +304,48 @@ exports.deleteQuiz = async (req, res) => {
 // Get User's Quizzes (UPDATED for Dashboard)
 exports.getUserQuizzes = async (req, res) => {
   try {
-    const { type } = req.query; // 'created' or 'participated'
+    const { type } = req.query;
 
     let quizzes;
 
     if (type === "created") {
-      // Fetch quizzes created by the user
       quizzes = await Quiz.find({ host: req.user._id })
         .sort({ createdAt: -1 })
         .populate("participants", "username profilePicture");
     } else if (type === "participated") {
-      // Fetch quizzes the user participated in
       const participation = await Participant.find({ user: req.user._id })
-        .sort({ createdAt: -1 }) // Sort by most recent attempt
+        .sort({ createdAt: -1 })
         .populate({
           path: "quiz",
-          select: "title status startTime code duration", // Select specific fields
+          select: "title status startTime code duration",
         });
 
-      // Transform the data to include Quiz Details + My Result
       quizzes = participation
         .map((p) => {
-          if (!p.quiz) return null; // Skip if quiz was deleted
+          if (!p.quiz) return null;
           return {
             _id: p.quiz._id,
             title: p.quiz.title,
             code: p.quiz.code,
             startTime: p.quiz.startTime,
             status: p.quiz.status,
-            // User's specific result data
             score: p.totalScore || 0,
             rank: p.rank || "-",
             completed: p.completed,
-            dateTaken: p.createdAt,
+            // --- FIX IS HERE ---
+            // Prioritize finished time, then start time, then creation time
+            dateTaken: p.finishedAt || p.startedAt || p.createdAt || new Date(),
           };
         })
-        .filter((q) => q !== null); // Filter out nulls
+        .filter((q) => q !== null);
     } else {
       quizzes = [];
     }
 
-    res.json({
-      success: true,
-      quizzes,
-    });
+    res.json({ success: true, quizzes });
   } catch (error) {
     console.error("Get user quizzes error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to get quizzes",
-    });
+    res.status(500).json({ success: false, message: "Failed to get quizzes" });
   }
 };
 

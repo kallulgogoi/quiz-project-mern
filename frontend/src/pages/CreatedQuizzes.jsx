@@ -11,11 +11,16 @@ import {
   Copy,
   Users,
   BarChart2,
+  Search,
+  X,
+  Filter,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function CreatedQuizzes() {
   const [quizzes, setQuizzes] = useState([]);
+  const [filteredQuizzes, setFilteredQuizzes] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -25,6 +30,7 @@ export default function CreatedQuizzes() {
       try {
         const { data } = await api.get(endpoints.quiz.myQuizzes("created"));
         setQuizzes(data.quizzes);
+        setFilteredQuizzes(data.quizzes);
       } catch (err) {
         toast.error("Failed to fetch quizzes");
       } finally {
@@ -34,31 +40,51 @@ export default function CreatedQuizzes() {
     fetchQuizzes();
   }, []);
 
+  // Search functionality
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setFilteredQuizzes(quizzes);
+    } else {
+      const lowerQuery = searchQuery.toLowerCase();
+      const filtered = quizzes.filter(
+        (quiz) =>
+          quiz.title.toLowerCase().includes(lowerQuery) ||
+          quiz.code.toLowerCase().includes(lowerQuery)
+      );
+      setFilteredQuizzes(filtered);
+    }
+  }, [searchQuery, quizzes]);
+
   const handleDelete = async (quizId) => {
-    if (!window.confirm("Delete this quiz? This cannot be undone.")) return;
+    if (!window.confirm("Delete this quiz permanently? This cannot be undone."))
+      return;
     try {
       await api.delete(endpoints.quiz.delete(quizId));
-      setQuizzes((prev) => prev.filter((q) => q._id !== quizId));
-      toast.success("Deleted successfully");
+      const updated = quizzes.filter((q) => q._id !== quizId);
+      setQuizzes(updated);
+      setFilteredQuizzes(updated);
+      toast.success("Quiz deleted successfully");
     } catch (err) {
-      toast.error("Failed to delete");
+      toast.error("Failed to delete quiz");
     }
   };
 
   const copyCode = (code) => {
     navigator.clipboard.writeText(code);
-    toast.success("Code copied!");
+    toast.success("Join code copied!");
   };
 
+  const clearSearch = () => setSearchQuery("");
+
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+    <div className="min-h-screen bg-gray-50 p-6 md:p-10">
+      <div className="max-w-5xl mx-auto">
+        {/* Header & Search */}
+        <div className="flex flex-col md:flex-row gap-6 mb-10 justify-between items-start md:items-center">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate("/dashboard")}
-              className="p-2.5 bg-white hover:bg-gray-100 rounded-xl text-gray-500 shadow-sm border border-gray-200 transition"
+              className="p-3 bg-white hover:bg-gray-100 rounded-xl text-gray-500 shadow-sm border border-gray-200 transition"
             >
               <ArrowLeft size={20} />
             </button>
@@ -67,157 +93,191 @@ export default function CreatedQuizzes() {
                 My Hosted Quizzes
               </h1>
               <p className="text-gray-500 text-sm">
-                Create, manage, and analyze
+                Manage and launch your games
               </p>
             </div>
           </div>
-          <button
-            onClick={() => navigate("/create")}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition font-bold shadow-md shadow-indigo-200"
-          >
-            <Plus size={20} /> Create New
-          </button>
+
+          <div className="flex gap-3 w-full md:w-auto">
+            <div className="relative flex-1 md:w-72">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                size={18}
+              />
+              <input
+                type="text"
+                placeholder="Search by title or code..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition text-sm font-medium shadow-sm"
+              />
+              {searchQuery && (
+                <button
+                  onClick={clearSearch}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+            <button
+              onClick={() => navigate("/create")}
+              className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition font-bold shadow-lg shadow-indigo-200 text-sm whitespace-nowrap flex items-center gap-2"
+            >
+              <Plus size={18} /> Create New
+            </button>
+          </div>
         </div>
 
+        {/* Loading State */}
         {loading ? (
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="space-y-4">
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="h-64 bg-gray-200 rounded-2xl animate-pulse"
+                className="h-32 bg-gray-200 rounded-2xl animate-pulse"
               />
             ))}
           </div>
-        ) : quizzes.length === 0 ? (
-          <div className="text-center py-24 bg-white rounded-3xl border-2 border-dashed border-gray-200">
-            <div className="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Plus size={32} />
+        ) : filteredQuizzes.length === 0 ? (
+          <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
+            <div className="w-16 h-16 bg-indigo-50 text-indigo-400 rounded-full flex items-center justify-center mx-auto mb-4">
+              {searchQuery ? <Search size={32} /> : <Plus size={32} />}
             </div>
-            <h3 className="text-xl font-bold text-gray-800">No quizzes yet</h3>
+            <h3 className="text-lg font-bold text-gray-800">
+              {searchQuery ? "No quizzes found" : "No quizzes created yet"}
+            </h3>
             <p className="text-gray-500 mb-6">
-              Create your first quiz to get started!
+              {searchQuery
+                ? `No matches for "${searchQuery}". Try a different term.`
+                : "Start creating interactive quizzes for your audience!"}
             </p>
-            <button
-              onClick={() => navigate("/create")}
-              className="text-indigo-600 font-bold hover:underline"
-            >
-              Create Now
-            </button>
+            {!searchQuery && (
+              <button
+                onClick={() => navigate("/create")}
+                className="text-indigo-600 font-bold hover:underline"
+              >
+                Create Now
+              </button>
+            )}
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {quizzes.map((quiz) => (
+          /* Quiz List */
+          <div className="grid gap-4">
+            {filteredQuizzes.map((quiz) => (
               <div
                 key={quiz._id}
-                className="bg-white rounded-2xl shadow-sm border border-gray-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden group"
+                className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 hover:shadow-md hover:border-indigo-200 transition-all duration-300 group relative"
               >
-                {/* Status Bar */}
-                <div
-                  className={`h-2 w-full ${
-                    quiz.status === "active"
-                      ? "bg-green-500"
-                      : quiz.status === "completed"
-                      ? "bg-gray-400"
-                      : "bg-blue-500"
-                  }`}
-                />
+                <div className="flex flex-col lg:flex-row lg:items-center gap-6">
+                  {/* Status Indicator Bar (Left side) */}
+                  <div
+                    className={`absolute left-0 top-0 bottom-0 w-1.5 rounded-l-2xl ${
+                      quiz.status === "active"
+                        ? "bg-green-500"
+                        : quiz.status === "completed"
+                        ? "bg-gray-300"
+                        : "bg-indigo-500"
+                    }`}
+                  />
 
-                <div className="p-6 flex-1">
-                  <div className="flex justify-between items-start mb-4">
-                    <span
-                      className={`px-3 py-1 text-xs font-bold uppercase rounded-full tracking-wide ${
-                        quiz.status === "active"
-                          ? "bg-green-100 text-green-700"
-                          : quiz.status === "completed"
-                          ? "bg-gray-100 text-gray-600"
-                          : "bg-blue-50 text-blue-700"
-                      }`}
-                    >
-                      {quiz.status}
-                    </span>
-                    <div className="flex items-center text-gray-400 text-xs font-medium bg-gray-50 px-2 py-1 rounded-md">
-                      <Users size={12} className="mr-1" />
-                      {quiz.participants?.length || 0}
+                  {/* Main Info */}
+                  <div className="flex-1 pl-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-lg font-bold text-gray-800 group-hover:text-indigo-600 transition-colors line-clamp-1">
+                        {quiz.title}
+                      </h3>
+                      <span
+                        className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-md tracking-wide shrink-0 ${
+                          quiz.status === "active"
+                            ? "bg-green-100 text-green-700"
+                            : quiz.status === "completed"
+                            ? "bg-gray-100 text-gray-600"
+                            : "bg-blue-50 text-blue-600"
+                        }`}
+                      >
+                        {quiz.status}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 font-medium">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar size={14} className="text-gray-400" />
+                        <span>
+                          {new Date(quiz.startTime).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Users size={14} className="text-gray-400" />
+                        <span>{quiz.participants?.length || 0} players</span>
+                      </div>
                     </div>
                   </div>
 
-                  <h3
-                    className="text-xl font-bold text-gray-800 mb-2 line-clamp-1"
-                    title={quiz.title}
-                  >
-                    {quiz.title}
-                  </h3>
-
-                  <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-                    <Calendar size={14} />
-                    <span>{new Date(quiz.startTime).toLocaleDateString()}</span>
-                  </div>
-
-                  {/* Join Code Box */}
+                  {/* Code Box */}
                   <div
                     onClick={() => copyCode(quiz.code)}
-                    className="bg-gray-50 border border-dashed border-gray-300 rounded-xl p-3 flex justify-between items-center cursor-pointer hover:bg-gray-100 transition group/code"
+                    className="flex items-center gap-3 bg-gray-50 px-4 py-2 rounded-xl border border-gray-200 cursor-pointer hover:bg-gray-100 hover:border-gray-300 transition group/code lg:w-40 justify-between"
                   >
-                    <div className="text-xs text-gray-500 uppercase font-semibold">
-                      Join Code
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-lg font-bold text-gray-800">
+                    <div>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase">
+                        Code
+                      </p>
+                      <p className="font-mono font-bold text-lg text-gray-700">
                         {quiz.code}
-                      </span>
-                      <Copy
-                        size={14}
-                        className="text-gray-400 group-hover/code:text-gray-600"
-                      />
+                      </p>
                     </div>
+                    <Copy
+                      size={16}
+                      className="text-gray-400 group-hover/code:text-gray-600"
+                    />
                   </div>
-                </div>
 
-                {/* Actions */}
-                <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex gap-2">
-                  <button
-                    onClick={() => navigate(`/host/edit/${quiz._id}`)}
-                    className="flex-1 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition flex items-center justify-center gap-2"
-                  >
-                    <Edit size={16} /> Edit
-                  </button>
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 w-full lg:w-auto mt-2 lg:mt-0">
+                    <button
+                      onClick={() => navigate(`/host/edit/${quiz._id}`)}
+                      className="p-2.5 text-gray-500 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:text-indigo-600 transition"
+                      title="Edit"
+                    >
+                      <Edit size={18} />
+                    </button>
 
-                  {/* Logic for the secondary button */}
-                  {quiz.status === "scheduled" ? (
-                    <button
-                      onClick={() => navigate(`/host/live/${quiz._id}`)}
-                      className="flex-1 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition flex items-center justify-center gap-2 shadow-sm"
-                    >
-                      <Play size={16} fill="currentColor" /> Host
-                    </button>
-                  ) : quiz.status === "active" ? (
-                    <button
-                      onClick={() =>
-                        navigate(`/host/live-dashboard/${quiz._id}`)
-                      }
-                      className="flex-1 py-2.5 text-sm font-semibold text-white bg-green-600 rounded-xl hover:bg-green-700 transition flex items-center justify-center gap-2 shadow-sm animate-pulse"
-                    >
-                      <BarChart2 size={16} /> Live
-                    </button>
-                  ) : (
-                    // FOR COMPLETED QUIZZES: Show "View Results"
-                    <button
-                      onClick={() => navigate(`/result/${quiz._id}`)}
-                      className="flex-1 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 transition flex items-center justify-center gap-2"
-                    >
-                      <BarChart2 size={16} /> Results
-                    </button>
-                  )}
+                    {quiz.status === "scheduled" ? (
+                      <button
+                        onClick={() => navigate(`/host/live/${quiz._id}`)}
+                        className="flex-1 lg:flex-none px-5 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition flex items-center justify-center gap-2 shadow-sm"
+                      >
+                        <Play size={16} fill="currentColor" /> Host
+                      </button>
+                    ) : quiz.status === "active" ? (
+                      <button
+                        onClick={() =>
+                          navigate(`/host/live-dashboard/${quiz._id}`)
+                        }
+                        className="flex-1 lg:flex-none px-5 py-2.5 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition flex items-center justify-center gap-2 shadow-sm animate-pulse"
+                      >
+                        <BarChart2 size={16} /> Live
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => navigate(`/result/${quiz._id}`)}
+                        className="flex-1 lg:flex-none px-5 py-2.5 bg-white border-2 border-gray-100 text-gray-600 font-bold rounded-xl hover:border-indigo-600 hover:text-indigo-600 transition flex items-center justify-center gap-2"
+                      >
+                        <BarChart2 size={16} /> Results
+                      </button>
+                    )}
 
-                  {quiz.status === "scheduled" && (
-                    <button
-                      onClick={() => handleDelete(quiz._id)}
-                      className="p-2.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition border border-transparent hover:border-red-100"
-                      title="Delete Quiz"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  )}
+                    {quiz.status === "scheduled" && (
+                      <button
+                        onClick={() => handleDelete(quiz._id)}
+                        className="p-2.5 text-red-400 bg-white border border-red-100 rounded-xl hover:bg-red-50 hover:text-red-600 transition"
+                        title="Delete"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
