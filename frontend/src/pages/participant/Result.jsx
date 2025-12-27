@@ -88,7 +88,7 @@ export default function Result() {
 
       <div className="mt-8 text-center">
         <Link
-          to="/"
+          to="/created-quizzes"
           className="inline-flex items-center gap-2 px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition"
         >
           <Home size={18} /> Back to Dashboard

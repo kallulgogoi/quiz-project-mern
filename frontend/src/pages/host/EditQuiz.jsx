@@ -84,8 +84,7 @@ export default function EditQuiz() {
     try {
       await api.put(endpoints.quiz.update(quizId), formData);
       toast.success("Quiz updated successfully!");
-      // Optional: Navigate back or stay
-      navigate("/");
+      navigate("/created-quizzes");
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to update quiz");
     } finally {
@@ -102,17 +101,17 @@ export default function EditQuiz() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
+    <div className="max-w-3xl mx-auto p-4 md:p-6 min-h-screen bg-gray-50/50">
       <button
-        onClick={() => navigate("/")}
+        onClick={() => navigate("/created-quizzes")}
         className="flex items-center text-gray-500 hover:text-gray-800 mb-6 transition"
       >
-        <ArrowLeft size={20} className="mr-2" /> Back to Dashboard
+        <ArrowLeft size={20} className="mr-2" /> Back to quizzes
       </button>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-6 border-b border-gray-100 bg-gray-50">
-          <h1 className="text-2xl font-bold text-gray-800">
+          <h1 className="text-xl md:text-2xl font-bold text-gray-800">
             Edit Quiz Details
           </h1>
           <p className="text-gray-500 text-sm mt-1">
@@ -120,7 +119,7 @@ export default function EditQuiz() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-8">
+        <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-8">
           {/* Basic Info */}
           <div className="space-y-4">
             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">
@@ -162,7 +161,7 @@ export default function EditQuiz() {
               <Calendar size={16} /> Schedule & Timing
             </h3>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Start Time
@@ -208,7 +207,7 @@ export default function EditQuiz() {
                   name="settings.showLeaderboard"
                   checked={formData.settings.showLeaderboard}
                   onChange={handleChange}
-                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 shrink-0"
                 />
                 <div>
                   <span className="block font-medium text-gray-700">
@@ -226,7 +225,7 @@ export default function EditQuiz() {
                   name="settings.shuffleQuestions"
                   checked={formData.settings.shuffleQuestions}
                   onChange={handleChange}
-                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 shrink-0"
                 />
                 <div>
                   <span className="block font-medium text-gray-700">
@@ -244,7 +243,7 @@ export default function EditQuiz() {
                   name="settings.allowMultipleAttempts"
                   checked={formData.settings.allowMultipleAttempts}
                   onChange={handleChange}
-                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 shrink-0"
                 />
                 <div>
                   <span className="block font-medium text-gray-700">
@@ -259,11 +258,11 @@ export default function EditQuiz() {
           </div>
 
           {/* Action Buttons */}
-          <div className="pt-6 flex gap-4">
+          <div className="pt-6 flex flex-col md:flex-row gap-4">
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition flex items-center justify-center gap-2 disabled:opacity-70 shadow-lg shadow-blue-200"
+              className="flex-1 bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 transition flex items-center justify-center gap-2 disabled:opacity-70 shadow-lg shadow-blue-200"
             >
               {saving ? (
                 <Loader2 className="animate-spin" />
@@ -275,8 +274,8 @@ export default function EditQuiz() {
             </button>
             <button
               type="button"
-              onClick={() => navigate(`/host/manage/${quizId}`)} // Option to go to Questions
-              className="px-6 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition"
+              onClick={() => navigate(`/host/manage/${quizId}`)}
+              className="px-6 py-3.5 bg-white border border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition w-full md:w-auto text-center"
             >
               Manage Questions
             </button>

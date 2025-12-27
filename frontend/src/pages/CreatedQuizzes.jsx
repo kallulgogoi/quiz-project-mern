@@ -13,7 +13,7 @@ import {
   BarChart2,
   Search,
   X,
-  Filter,
+  ArrowUp, // Added ArrowUp icon
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -22,6 +22,7 @@ export default function CreatedQuizzes() {
   const [filteredQuizzes, setFilteredQuizzes] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [showScrollTop, setShowScrollTop] = useState(false); // State for scroll button
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -55,6 +56,25 @@ export default function CreatedQuizzes() {
     }
   }, [searchQuery, quizzes]);
 
+  // --- SCROLL TO TOP LOGIC ---
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 300) {
+        setShowScrollTop(true);
+      } else {
+        setShowScrollTop(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  // ---------------------------
+
   const handleDelete = async (quizId) => {
     if (!window.confirm("Delete this quiz permanently? This cannot be undone."))
       return;
@@ -77,7 +97,7 @@ export default function CreatedQuizzes() {
   const clearSearch = () => setSearchQuery("");
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 md:p-10">
+    <div className="min-h-screen bg-gray-50 p-6 md:p-10 relative">
       <div className="max-w-5xl mx-auto">
         {/* Header & Search */}
         <div className="flex flex-col md:flex-row gap-6 mb-10 justify-between items-start md:items-center">
@@ -284,6 +304,17 @@ export default function CreatedQuizzes() {
           </div>
         )}
       </div>
+
+      {/* --- SCROLL TO TOP BUTTON --- */}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-8 right-8 p-3.5 bg-gray-900 text-white rounded-full shadow-2xl hover:bg-black hover:scale-110 transition-all duration-300 z-50 animate-bounce"
+          title="Scroll to Top"
+        >
+          <ArrowUp size={24} />
+        </button>
+      )}
     </div>
   );
 }
