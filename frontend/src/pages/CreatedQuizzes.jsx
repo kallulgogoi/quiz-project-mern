@@ -56,7 +56,7 @@ export default function CreatedQuizzes() {
     }
   }, [searchQuery, quizzes]);
 
-  // --- SCROLL TO TOP LOGIC ---
+  // scroll top
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 300) {
@@ -73,7 +73,6 @@ export default function CreatedQuizzes() {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-  // ---------------------------
 
   const handleDelete = async (quizId) => {
     if (!window.confirm("Delete this quiz permanently? This cannot be undone."))
@@ -224,7 +223,14 @@ export default function CreatedQuizzes() {
                       <div className="flex items-center gap-1.5">
                         <Calendar size={14} className="text-gray-400" />
                         <span>
-                          {new Date(quiz.startTime).toLocaleDateString()}
+                          {new Date(quiz.startTime).toLocaleDateString(
+                            "en-IN",
+                            {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            }
+                          )}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5">

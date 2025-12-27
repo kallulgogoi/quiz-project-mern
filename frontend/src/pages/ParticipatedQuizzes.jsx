@@ -60,9 +60,8 @@ export default function ParticipatedQuizzes() {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-  // ---------------------------
 
-  // --- STATS ---
+  // stats
   const stats = useMemo(() => {
     const totalTaken = quizzes.length;
     const totalScore = quizzes.reduce(
@@ -78,7 +77,7 @@ export default function ParticipatedQuizzes() {
     return { totalTaken, avgScore, bestRank };
   }, [quizzes]);
 
-  // --- FILTERING ---
+  //  FILTERING
   const filteredQuizzes = quizzes.filter((q) =>
     q.title?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -187,7 +186,7 @@ export default function ParticipatedQuizzes() {
         )}
       </div>
 
-      {/* --- SCROLL TO TOP BUTTON --- */}
+      {/* SCROLL TO TOP BUTTON*/}
       {showScrollTop && (
         <button
           onClick={scrollToTop}
@@ -201,7 +200,7 @@ export default function ParticipatedQuizzes() {
   );
 }
 
-// --- Helper Components ---
+// Helper Components
 
 function StatCard({ icon, label, value, color }) {
   const colors = {
@@ -241,7 +240,7 @@ function QuizCard({ quiz, navigate }) {
   if (quiz.dateTaken) {
     try {
       const date = new Date(quiz.dateTaken);
-      dateStr = format(date, "MMM dd, yyyy");
+      dateStr = format(date, "dd MMM, yyyy");
       timeStr = format(date, "h:mm a");
     } catch (e) {
       dateStr = "Invalid Date";

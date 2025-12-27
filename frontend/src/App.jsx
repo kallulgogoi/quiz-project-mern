@@ -1,4 +1,3 @@
-// App.jsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { SocketProvider } from "./context/SocketContext";
@@ -6,33 +5,35 @@ import { Toaster } from "react-hot-toast";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 
-// Public Pages
+// Landing Page
 import LandingPage from "./pages/LandingPage";
+
+// ... (Keep all your existing imports) ...
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import VerifyOTP from "./pages/auth/VerifyOTP";
-
-// Protected Pages
 import Dashboard from "./pages/Dashboard";
 import CreatedQuizzes from "./pages/CreatedQuizzes";
 import ParticipatedQuizzes from "./pages/ParticipatedQuizzes";
-import Profile from "./pages/Profile";
 import CreateQuiz from "./pages/host/CreateQuiz";
+import LiveLeaderboard from "./pages/host/LiveLeaderboard";
 import EditQuiz from "./pages/host/EditQuiz";
 import ManageQuiz from "./pages/host/ManageQuiz";
 import HostLobby from "./pages/host/HostLobby";
-import LiveLeaderboard from "./pages/host/LiveLeaderboard";
 import JoinQuiz from "./pages/participant/JoinQuiz";
 import UserLobby from "./pages/participant/UserLobby";
 import TakeQuiz from "./pages/participant/TakeQuiz";
 import Result from "./pages/participant/Result";
 import QuizAttemptDetails from "./pages/participant/QuizAttemptDetails";
+import Profile from "./pages/Profile";
 
-// Redirect logged-in users away from public pages
+// Helper component to redirect if already logged in
 const PublicRoute = ({ children }) => {
   const { user, loading } = useAuth();
   if (loading) return null;
-  return user ? <Navigate to="/" replace /> : children;
+  // If user is logged in, send them to dashboard instead of landing/login
+  if (user) return <Navigate to="/dashboard" replace />;
+  return children;
 };
 
 function App() {
@@ -42,7 +43,7 @@ function App() {
         <SocketProvider>
           <Toaster position="top-center" />
           <Routes>
-            {/* Public Routes */}
+            {/* --- PUBLIC ROUTES --- */}
             <Route
               path="/"
               element={
@@ -69,40 +70,36 @@ function App() {
             />
             <Route path="/verify-otp" element={<VerifyOTP />} />
 
-            {/* Protected Routes with Layout */}
+            {/* --- PROTECTED ROUTES --- */}
             <Route element={<ProtectedRoute />}>
               <Route element={<Layout />}>
-                {/* Dashboard is the index (home) route after login */}
-                <Route index element={<Dashboard />} />
-                <Route path="created-quizzes" element={<CreatedQuizzes />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/created-quizzes" element={<CreatedQuizzes />} />
                 <Route
-                  path="participated-quizzes"
+                  path="/participated-quizzes"
                   element={<ParticipatedQuizzes />}
                 />
-                <Route path="profile" element={<Profile />} />
-                <Route path="create" element={<CreateQuiz />} />
-                <Route path="host/edit/:quizId" element={<EditQuiz />} />
-                <Route path="host/manage/:quizId" element={<ManageQuiz />} />
-                <Route path="host/live/:quizId" element={<HostLobby />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/create" element={<CreateQuiz />} />
+                <Route path="/host/edit/:quizId" element={<EditQuiz />} />
+                <Route path="/host/manage/:quizId" element={<ManageQuiz />} />
+                <Route path="/host/live/:quizId" element={<HostLobby />} />
                 <Route
-                  path="host/live-dashboard/:quizId"
+                  path="/host/live-dashboard/:quizId"
                   element={<LiveLeaderboard />}
                 />
-                <Route path="join" element={<JoinQuiz />} />
+                <Route path="/join" element={<JoinQuiz />} />
                 <Route
-                  path="attempt/:quizId"
+                  path="/attempt/:quizId"
                   element={<QuizAttemptDetails />}
                 />
-                <Route path="result/:quizId" element={<Result />} />
+                <Route path="/result/:quizId" element={<Result />} />
               </Route>
 
-              {/* Full-screen immersive routes (no layout) */}
-              <Route path="lobby/:quizId" element={<UserLobby />} />
-              <Route path="take-quiz/:quizId" element={<TakeQuiz />} />
+              {/* Immersive Routes */}
+              <Route path="/lobby/:quizId" element={<UserLobby />} />
+              <Route path="/take-quiz/:quizId" element={<TakeQuiz />} />
             </Route>
-
-            {/* Fallback */}
-            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </SocketProvider>
       </AuthProvider>

@@ -85,9 +85,6 @@ const quizSchema = new mongoose.Schema({
 // Update status based on time
 quizSchema.pre("save", function (next) {
   const now = new Date();
-
-  // Only auto-update status if it hasn't been manually modified (like setting it to 'active' during live start)
-  // OR if we are just creating it/updating times.
   if (!this.isModified("status")) {
     if (now < this.startTime) {
       this.status = "scheduled";
