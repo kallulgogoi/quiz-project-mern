@@ -33,10 +33,7 @@ const questionSchema = new mongoose.Schema({
     default: 1,
     min: 1,
   },
-  timeLimit: {
-    type: Number, // in seconds
-    default: 60,
-  },
+  // Removed timeLimit
   explanation: {
     type: String,
     default: "",

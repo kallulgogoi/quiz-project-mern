@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api, { endpoints } from "../../api/axios";
 import { Timer } from "lucide-react";
+import { differenceInSeconds } from "date-fns";
 
 export default function TakeQuiz() {
   const { quizId } = useParams();
@@ -16,16 +17,23 @@ export default function TakeQuiz() {
       try {
         const { data } = await api.post(endpoints.quiz.start(quizId));
         setQuestions(data.questions);
-        setTimeLeft(data.quiz.duration * 60); // Convert minutes to seconds
+
+        // Calculate Time Remaining based on server-provided End Time
+        // This handles late joins correctly
+        const endTime = new Date(data.quiz.endTime);
+        const now = new Date();
+        const diff = differenceInSeconds(endTime, now);
+
+        setTimeLeft(diff > 0 ? diff : 0);
       } catch (err) {
         alert(err.response?.data?.message || "Error starting quiz");
         navigate("/dashboard");
       }
     };
     startQuiz();
-  }, [quizId]);
+  }, [quizId, navigate]);
 
-  // Global Timer
+  // Global Timer (Counts down to zero)
   useEffect(() => {
     if (timeLeft <= 0) return;
     const timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
@@ -70,6 +78,7 @@ export default function TakeQuiz() {
         </span>
         <div className="flex items-center gap-2 text-orange-600 font-bold">
           <Timer size={20} />
+          {/* Global Timer Display */}
           {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, "0")}
         </div>
       </div>

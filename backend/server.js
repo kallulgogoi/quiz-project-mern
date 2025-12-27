@@ -20,9 +20,13 @@ const connectDB = require("./config/db");
 // Initialize express
 const app = express();
 const server = http.createServer(app);
+
+// --- SOCKET SETUP ---
 const io = socketIo(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    // Allow both localhost and your potential production URL
+    origin: [process.env.FRONTEND_URL, "http://localhost:5173"],
+    methods: ["GET", "POST"],
     credentials: true,
   },
 });
@@ -33,32 +37,32 @@ connectDB();
 // Middleware
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: [process.env.FRONTEND_URL, "http://localhost:5173"],
     credentials: true,
   })
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Socket.io connection
+// --- SOCKET LOGIC ---
 io.on("connection", (socket) => {
-  console.log("New client connected");
+  console.log("New client connected:", socket.id);
 
-  socket.on("join-quiz", (quizId) => {
+  // 1. MATCH FRONTEND EVENT NAME
+  // Frontend: socket.emit("join-quiz-room", quizId);
+  socket.on("join-quiz-room", (quizId) => {
     socket.join(`quiz-${quizId}`);
-    console.log(`User joined quiz: ${quizId}`);
+    console.log(`Socket ${socket.id} joined room: quiz-${quizId}`);
   });
 
+  // Note: We REMOVED 'socket.on("quiz-started")' because your
+  // quizController.js (startQuizLive) handles the broadcasting.
+  // Doing it here would be redundant.
+
+  // Optional: Real-time Answer Feed (if you want live dashboard updates)
   socket.on("submit-answer", (data) => {
+    // Notify host only (if you have a specific host room) or the whole room
     io.to(`quiz-${data.quizId}`).emit("answer-submitted", data);
-  });
-
-  socket.on("quiz-started", (quizId) => {
-    io.to(`quiz-${quizId}`).emit("quiz-start");
-  });
-
-  socket.on("quiz-ended", (quizId) => {
-    io.to(`quiz-${quizId}`).emit("quiz-end");
   });
 
   socket.on("disconnect", () => {
@@ -66,7 +70,7 @@ io.on("connection", (socket) => {
   });
 });
 
-// Make io available to routes
+// Make io available to routes (Crucial for Controller)
 app.set("io", io);
 
 // Routes

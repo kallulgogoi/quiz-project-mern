@@ -11,8 +11,8 @@ exports.addQuestion = async (req, res) => {
       options,
       correctAnswers,
       points,
-      timeLimit,
       explanation,
+      // timeLimit is removed from here
     } = req.body;
 
     const quiz = await Quiz.findById(quizId);
@@ -31,6 +31,15 @@ exports.addQuestion = async (req, res) => {
       });
     }
 
+    // --- CHECK: Prevent modification if quiz is COMPLETED ---
+    if (quiz.status === "completed") {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot add questions to a completed quiz",
+      });
+    }
+    // --------------------------------------------------------
+
     // Determine order
     const count = await Question.countDocuments({ quiz: quizId });
 
@@ -41,9 +50,9 @@ exports.addQuestion = async (req, res) => {
       options: options || [],
       correctAnswers: correctAnswers || [],
       points: points || 1,
-      timeLimit: timeLimit || 30,
       explanation: explanation || "",
       order: count + 1,
+      // timeLimit is removed from creation
     });
 
     await question.save();
@@ -80,7 +89,7 @@ exports.updateQuestion = async (req, res) => {
       });
     }
 
-    // Find quiz to check host permission
+    // Find quiz to check host permission and status
     const quiz = await Quiz.findById(question.quiz);
     if (!quiz) {
       return res
@@ -95,9 +104,21 @@ exports.updateQuestion = async (req, res) => {
       });
     }
 
+    // --- CHECK: Prevent modification if quiz is COMPLETED ---
+    if (quiz.status === "completed") {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot edit questions of a completed quiz",
+      });
+    }
+    // --------------------------------------------------------
+
     // Perform updates
     Object.keys(updates).forEach((key) => {
-      question[key] = updates[key];
+      // Ensure we don't accidentally add timeLimit back if sent
+      if (key !== "timeLimit") {
+        question[key] = updates[key];
+      }
     });
 
     await question.save();
@@ -138,6 +159,15 @@ exports.deleteQuestion = async (req, res) => {
           message: "Only the host can delete questions",
         });
       }
+
+      // --- CHECK: Prevent modification if quiz is COMPLETED ---
+      if (quiz.status === "completed") {
+        return res.status(400).json({
+          success: false,
+          message: "Cannot delete questions from a completed quiz",
+        });
+      }
+      // --------------------------------------------------------
 
       // Remove from quiz array
       quiz.questions = quiz.questions.filter(

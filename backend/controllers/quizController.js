@@ -27,14 +27,13 @@ exports.createQuiz = async (req, res) => {
       title,
       description,
       startTime,
-      endTime,
+      // endTime removed from input
       duration,
       settings = {},
     } = req.body;
 
     // Validate times
     const start = new Date(startTime);
-    const end = new Date(endTime);
     const now = new Date();
 
     if (start < now) {
@@ -44,12 +43,16 @@ exports.createQuiz = async (req, res) => {
       });
     }
 
-    if (end <= start) {
+    if (!duration || duration < 1) {
       return res.status(400).json({
         success: false,
-        message: "End time must be after start time",
+        message: "Duration must be at least 1 minute",
       });
     }
+
+    // Auto-calculate End Time
+    const durationInMs = parseInt(duration) * 60 * 1000;
+    const end = new Date(start.getTime() + durationInMs);
 
     // Generate unique code
     const code = await generateUniqueCode();
@@ -241,10 +244,20 @@ exports.updateQuiz = async (req, res) => {
       });
     }
 
-    // Update quiz
+    // Update quiz fields
     Object.keys(updates).forEach((key) => {
-      quiz[key] = updates[key];
+      // Don't allow manual endTime update via this route
+      if (key !== "endTime") {
+        quiz[key] = updates[key];
+      }
     });
+
+    // Recalculate End Time if start or duration changed
+    if (updates.startTime || updates.duration) {
+      const start = new Date(quiz.startTime);
+      const durationInMs = quiz.duration * 60 * 1000;
+      quiz.endTime = new Date(start.getTime() + durationInMs);
+    }
 
     await quiz.save();
 
@@ -384,16 +397,18 @@ exports.startQuiz = async (req, res) => {
       });
     }
 
-    // Check if quiz has started
     const now = new Date();
-    if (now < quiz.startTime) {
+
+    // If quiz is scheduled, check start time
+    if (quiz.status === "scheduled" && now < quiz.startTime) {
       return res.status(400).json({
         success: false,
         message: "Quiz has not started yet",
       });
     }
 
-    if (now > quiz.endTime) {
+    // If quiz is completed or time passed
+    if (quiz.status === "completed" || now > quiz.endTime) {
       return res.status(400).json({
         success: false,
         message: "Quiz has ended",
@@ -444,7 +459,7 @@ exports.startQuiz = async (req, res) => {
         id: quiz._id,
         title: quiz.title,
         duration: quiz.duration,
-        endTime: quiz.endTime,
+        endTime: quiz.endTime, // Send this for countdown
       },
       questions,
       settings: quiz.settings,
@@ -474,7 +489,8 @@ exports.submitAnswers = async (req, res) => {
 
     // Check if quiz is still active
     const now = new Date();
-    if (now > quiz.endTime) {
+    // Allow a small buffer (e.g. 10 seconds) for network latency
+    if (now > new Date(quiz.endTime).getTime() + 10000) {
       return res.status(400).json({
         success: false,
         message: "Quiz has ended",
@@ -597,7 +613,7 @@ exports.submitAnswers = async (req, res) => {
       }
     );
 
-    // --- NEW: Notify Live Dashboard ---
+    // Notify Live Dashboard
     const io = req.app.get("io");
     if (io) {
       io.to(`quiz-${quizId}`).emit("leaderboard-update", {
@@ -607,7 +623,6 @@ exports.submitAnswers = async (req, res) => {
         rank: rank,
       });
     }
-    // ----------------------------------
 
     res.json({
       success: true,
@@ -674,6 +689,7 @@ exports.getLeaderboard = async (req, res) => {
     });
   }
 };
+
 // Host: Start Quiz Live
 exports.startQuizLive = async (req, res) => {
   try {
@@ -691,24 +707,21 @@ exports.startQuizLive = async (req, res) => {
       return res.status(403).json({ success: false, message: "Unauthorized" });
     }
 
-    // --- CHECK: Enforce Schedule ---
+    // FORCE START: Update Start Time to NOW and Recalculate End Time
     const now = new Date();
-    if (new Date(quiz.startTime) > now) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Quiz cannot start before the scheduled time. Please reschedule if you want to start now.",
-      });
-    }
+    const durationInMs = quiz.duration * 60 * 1000;
 
-    // Update quiz status to active
+    quiz.startTime = now;
+    quiz.endTime = new Date(now.getTime() + durationInMs);
     quiz.status = "active";
+
     await quiz.save();
 
     // Notify all participants
     io.to(`quiz-${quizId}`).emit("quiz-started", {
       quizId,
       startTime: quiz.startTime,
+      endTime: quiz.endTime,
     });
 
     res.json({
@@ -767,6 +780,7 @@ exports.endQuizLive = async (req, res) => {
   }
 };
 
+// Get Quiz By ID (for management/host)
 exports.getQuizById = async (req, res) => {
   try {
     const { quizId } = req.params;

@@ -10,7 +10,6 @@ import {
   Settings,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { format } from "date-fns";
 
 export default function EditQuiz() {
   const { quizId } = useParams();
@@ -22,7 +21,7 @@ export default function EditQuiz() {
     title: "",
     description: "",
     startTime: "",
-    endTime: "",
+    // endTime removed
     duration: 30,
     settings: {
       showLeaderboard: true,
@@ -48,7 +47,6 @@ export default function EditQuiz() {
           title: quiz.title,
           description: quiz.description || "",
           startTime: formatDateForInput(quiz.startTime),
-          endTime: formatDateForInput(quiz.endTime),
           duration: quiz.duration,
           settings: {
             showLeaderboard: quiz.settings?.showLeaderboard ?? true,
@@ -68,7 +66,7 @@ export default function EditQuiz() {
   }, [quizId, navigate]);
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value, checked } = e.target;
     if (name.startsWith("settings.")) {
       const settingName = name.split(".")[1];
       setFormData((prev) => ({
@@ -179,32 +177,19 @@ export default function EditQuiz() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  End Time
+                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                  <Clock size={16} className="text-gray-400" /> Duration
+                  (minutes)
                 </label>
                 <input
-                  type="datetime-local"
-                  name="endTime"
-                  value={formData.endTime}
+                  type="number"
+                  name="duration"
+                  value={formData.duration}
                   onChange={handleChange}
-                  required
+                  min="1"
                   className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
-                <Clock size={16} className="text-gray-400" /> Duration (minutes)
-              </label>
-              <input
-                type="number"
-                name="duration"
-                value={formData.duration}
-                onChange={handleChange}
-                min="1"
-                className="w-full md:w-1/3 p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              />
             </div>
           </div>
 

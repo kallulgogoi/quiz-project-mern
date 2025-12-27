@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api, { endpoints } from "../../api/axios";
 import {
-  Save,
   Calendar,
   Clock,
   Settings,
@@ -20,7 +19,7 @@ export default function CreateQuiz() {
     title: "",
     description: "",
     startTime: "",
-    endTime: "",
+    // endTime is removed from state
     duration: 30, // minutes
     settings: {
       showLeaderboard: true,
@@ -30,7 +29,7 @@ export default function CreateQuiz() {
   });
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value, checked } = e.target;
     if (name.startsWith("settings.")) {
       const settingName = name.split(".")[1];
       setFormData((prev) => ({
@@ -47,21 +46,14 @@ export default function CreateQuiz() {
 
     // --- VALIDATION START ---
     if (!formData.title) return toast.error("Please enter a title");
-    if (!formData.startTime || !formData.endTime)
-      return toast.error("Please set the schedule");
+    if (!formData.startTime) return toast.error("Please set the start time");
 
     const start = new Date(formData.startTime);
-    const end = new Date(formData.endTime);
     const now = new Date();
 
     // 1. Check if Start Time is in the future
     if (start < now) {
       return toast.error("Start time must be in the future");
-    }
-
-    // 2. Check if End Time is after Start Time
-    if (end <= start) {
-      return toast.error("End time must be after start time");
     }
     // --- VALIDATION END ---
 
@@ -145,8 +137,8 @@ export default function CreateQuiz() {
                 Schedule & Timing
               </h3>
               <p className="text-sm text-gray-500 leading-relaxed">
-                Set when the quiz opens and closes. The duration limits how long
-                a user has once they start.
+                Set when the quiz opens and the duration. The system will
+                automatically calculate the end time.
               </p>
             </div>
 
@@ -167,35 +159,22 @@ export default function CreateQuiz() {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                    <Calendar size={16} className="text-purple-500" /> End Time
+                    <Clock size={16} className="text-orange-500" /> Duration
+                    (minutes)
                   </label>
-                  <input
-                    type="datetime-local"
-                    name="endTime"
-                    required
-                    className="w-full p-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-purple-50 focus:border-purple-500 outline-none transition bg-gray-50/50"
-                    onChange={handleChange}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                  <Clock size={16} className="text-orange-500" /> Duration
-                  (minutes)
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    name="duration"
-                    defaultValue={30}
-                    min="1"
-                    className="w-full md:w-1/3 p-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-orange-50 focus:border-orange-500 outline-none transition font-medium"
-                    onChange={handleChange}
-                  />
-                  <span className="absolute left-[calc(33%+1rem)] top-3.5 text-gray-400 hidden md:block">
-                    mins
-                  </span>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      name="duration"
+                      defaultValue={30}
+                      min="1"
+                      className="w-full p-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-orange-50 focus:border-orange-500 outline-none transition font-medium"
+                      onChange={handleChange}
+                    />
+                    <span className="absolute right-4 top-3.5 text-gray-400 hidden md:block">
+                      mins
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

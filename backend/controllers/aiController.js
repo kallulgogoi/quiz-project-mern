@@ -1,6 +1,7 @@
 const geminiService = require("../services/geminiService");
 const Question = require("../models/Question");
-const Quiz = require("../models/Quiz"); // <--- ADD THIS LINE
+const Quiz = require("../models/Quiz");
+
 // Generate Questions with AI
 exports.generateQuestions = async (req, res) => {
   try {
@@ -111,7 +112,7 @@ exports.saveGeneratedQuestions = async (req, res) => {
         correctAnswers: q.correctAnswers || [],
         explanation: q.explanation || "",
         points: q.points || 1,
-        timeLimit: q.timeLimit || 60,
+        // No timeLimit here
         order: order++,
       });
 
