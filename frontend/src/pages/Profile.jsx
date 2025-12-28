@@ -39,8 +39,6 @@ export default function Profile() {
       setImagePreview(user.profilePicture);
     }
   }, [user]);
-
-  // --- Profile Logic ---
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -107,7 +105,7 @@ export default function Profile() {
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">
+            <h1 className="text-2xl font-bold font-Merriweather text-gray-800">
               Account Settings
             </h1>
             <p className="text-gray-500 text-sm">
@@ -119,7 +117,7 @@ export default function Profile() {
         <div className="grid md:grid-cols-2 gap-8">
           {/* LEFT COLUMN: Profile Details */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 h-fit transition-shadow hover:shadow-lg">
-            <h2 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2 pb-4 border-b border-gray-100">
+            <h2 className="text-lg font-bold font-Merriweather text-gray-800 mb-6 flex items-center gap-2 pb-4 border-b border-gray-100">
               <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
                 <User size={20} />
               </div>
@@ -212,7 +210,7 @@ export default function Profile() {
 
           {/* RIGHT COLUMN: Change Password */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 h-fit transition-shadow hover:shadow-lg">
-            <h2 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2 pb-4 border-b border-gray-100">
+            <h2 className="text-lg font-bold font-Merriweather text-gray-800 mb-6 flex items-center gap-2 pb-4 border-b border-gray-100">
               <div className="p-2 bg-green-50 text-green-600 rounded-lg">
                 <ShieldCheck size={20} />
               </div>

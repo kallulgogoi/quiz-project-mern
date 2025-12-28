@@ -43,7 +43,7 @@ export default function VerifyOTP() {
     try {
       await api.post("/auth/resend-otp", { email });
       toast.success("New OTP sent to your email");
-      setOtp(""); // Clear previous input
+      setOtp("");
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to resend OTP");
     } finally {
@@ -53,7 +53,7 @@ export default function VerifyOTP() {
 
   if (!email) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 flex items-center justify-center px-4">
         <div className="text-center">
           <p className="text-slate-600 mb-4">No email provided.</p>
           <Link
@@ -76,7 +76,7 @@ export default function VerifyOTP() {
             <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-900 rounded-2xl mb-5">
               <Mail size={32} className="text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-slate-900">
+            <h1 className="text-3xl font-bold font-Merriweather text-slate-900">
               Check Your Email
             </h1>
             <p className="text-slate-600 mt-3 max-w-sm mx-auto">

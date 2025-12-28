@@ -80,7 +80,7 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto px-6 py-10 md:py-14">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-slate-900">
+              <h1 className="text-3xl md:text-4xl font-bold font-Merriweather text-slate-900">
                 Welcome back,{" "}
                 <span className="text-indigo-600">{user?.username}</span>
               </h1>
@@ -159,19 +159,15 @@ export default function Dashboard() {
             </div>
           )}
         </div>
-
-        {/* Enhanced Quick Actions Section */}
         <h2 className="text-2xl font-semibold text-slate-900 mb-8 text-center">
           What would you like to do?
         </h2>
 
         <div className="grid md:grid-cols-2 gap-10 max-w-5xl mx-auto">
-          {/* Manage Quizzes Card – Improved */}
           <div
             onClick={() => navigate("/created-quizzes")}
             className="group relative bg-white rounded-3xl p-10 shadow-lg hover:shadow-2xl border border-slate-200 transition-all duration-500 cursor-pointer overflow-hidden"
           >
-            {/* Subtle inner glow on hover */}
             <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/0 to-indigo-100/0 group-hover:from-indigo-50/80 group-hover:to-indigo-100/50 transition-all duration-500 rounded-3xl"></div>
 
             <div className="relative z-10 flex flex-col items-center text-center">
@@ -194,8 +190,6 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-
-          {/* Game History Card – Improved */}
           <div
             onClick={() => navigate("/participated-quizzes")}
             className="group relative bg-white rounded-3xl p-10 shadow-lg hover:shadow-2xl border border-slate-200 transition-all duration-500 cursor-pointer overflow-hidden"

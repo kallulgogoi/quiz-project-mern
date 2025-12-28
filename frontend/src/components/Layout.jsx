@@ -26,14 +26,18 @@ export default function Layout() {
   };
 
   const closeMenu = () => setIsMobileMenuOpen(false);
-
-  // Correct active state logic
   const isActive = (path) => {
     if (path === "/") {
       return location.pathname === "/";
     }
     return location.pathname.startsWith(path);
   };
+
+  const displayUsername = user?.username
+    ? user.username.length > 6
+      ? user.username.slice(0, 6) + "..."
+      : user.username
+    : "User";
 
   const navItems = [
     { path: "/", label: "Dashboard", icon: <LayoutDashboard size={20} /> },
@@ -44,7 +48,7 @@ export default function Layout() {
     },
     {
       path: "/participated-quizzes",
-      label: "Game History",
+      label: "Participated quizzes",
       icon: <Trophy size={20} />,
     },
     { path: "/profile", label: "Profile", icon: <UserCircle size={20} /> },
@@ -55,13 +59,12 @@ export default function Layout() {
       {/* Navbar */}
       <nav className="bg-white/90 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-          {/* Logo */}
           <Link
             to="/"
             onClick={closeMenu}
-            className="text-3xl font-black tracking-tight bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent"
+            className="text-3xl font-black tracking-tight bg-linear-to-r from-indigo-600 to-purple-600 font-Kanit bg-clip-text text-transparent"
           >
-            QuizMaster
+            BudhiX
           </Link>
 
           {/* Desktop Nav */}
@@ -85,8 +88,8 @@ export default function Layout() {
             <div className="ml-4 pl-4 border-l border-slate-300 flex items-center gap-4">
               <div className="flex items-center gap-3">
                 <div
-                  className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg overflow-hidden"
-                  title={user?.username}
+                  className="w-10 h-10 bg-linear-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg overflow-hidden"
+                  title={user?.username || "User"}
                 >
                   {user?.profilePicture ? (
                     <img
@@ -99,7 +102,7 @@ export default function Layout() {
                   )}
                 </div>
                 <span className="font-semibold text-slate-800 hidden lg:block">
-                  {user?.username}
+                  {displayUsername}
                 </span>
               </div>
 
@@ -145,12 +148,20 @@ export default function Layout() {
 
                 <div className="pt-4 border-t border-slate-200">
                   <div className="flex items-center gap-4 px-5 py-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                      {user?.username?.[0]?.toUpperCase() || <User size={24} />}
+                    <div className="w-12 h-12 bg-linear-to-br from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-lg overflow-hidden">
+                      {user?.profilePicture ? (
+                        <img
+                          src={user.profilePicture}
+                          alt={user.username}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        user?.username?.[0]?.toUpperCase() || <User size={24} />
+                      )}
                     </div>
                     <div className="flex-1">
                       <p className="font-semibold text-slate-800">
-                        {user?.username}
+                        {displayUsername}
                       </p>
                       <p className="text-sm text-slate-500">View profile</p>
                     </div>

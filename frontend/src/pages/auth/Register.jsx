@@ -28,16 +28,14 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
-        {/* Same width as Login page: max-w-md */}
         <div className="bg-white rounded-2xl shadow-xl p-8 md:p-10">
-          {/* Logo & Title – exactly like Login */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-14 h-14 bg-slate-900 rounded-2xl mb-4">
               <UserPlus size={28} className="text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-slate-900">
+            <h1 className="text-3xl font-Merriweather font-bold text-slate-900">
               Create Account
             </h1>
             <p className="text-slate-600 mt-2">Join QuizMaster today</p>
@@ -62,7 +60,7 @@ export default function Register() {
                   type="text"
                   required
                   disabled={isLoading}
-                  placeholder="johndoe"
+                  placeholder="Kgogoi"
                   className="w-full pl-12 pr-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition disabled:opacity-70"
                   value={formData.username}
                   onChange={(e) =>

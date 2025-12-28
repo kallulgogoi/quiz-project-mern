@@ -38,7 +38,9 @@ export default function Login() {
             <div className="inline-flex items-center justify-center w-14 h-14 bg-slate-900 rounded-2xl mb-4">
               <LogIn size={28} className="text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-slate-900">Welcome Back</h1>
+            <h1 className="text-3xl font-bold font-Merriweather text-slate-900">
+              Welcome Back
+            </h1>
             <p className="text-slate-600 mt-2">
               Sign in to your QuizMaster account
             </p>
