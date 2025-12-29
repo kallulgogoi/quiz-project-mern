@@ -81,6 +81,10 @@ app.use((err, req, res, next) => {
     error: process.env.NODE_ENV === "development" ? err : {},
   });
 });
+//cron job route
+app.get("/ping", (req, res) => {
+  res.status(200).send("Pong");
+});
 
 // Start server
 const PORT = process.env.PORT || 5000;
