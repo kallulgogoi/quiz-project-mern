@@ -1,3 +1,5 @@
+//for vercel analytics
+import { Analytics } from "@vercel/analytics/react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { SocketProvider } from "./context/SocketContext";
@@ -96,6 +98,7 @@ function App() {
               <Route path="/take-quiz/:quizId" element={<TakeQuiz />} />
             </Route>
           </Routes>
+          <Analytics />
         </SocketProvider>
       </AuthProvider>
     </BrowserRouter>
