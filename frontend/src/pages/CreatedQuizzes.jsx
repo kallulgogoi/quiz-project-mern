@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import api, { endpoints } from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import {
@@ -13,16 +13,20 @@ import {
   BarChart2,
   Search,
   X,
-  ArrowUp, // Added ArrowUp icon
+  ArrowUp,
+  ArrowDown,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function CreatedQuizzes() {
   const [quizzes, setQuizzes] = useState([]);
-  const [filteredQuizzes, setFilteredQuizzes] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
-  const [showScrollTop, setShowScrollTop] = useState(false); // State for scroll button
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [sortOrder, setSortOrder] = useState("newest"); // Sort State
+  const [isSortOpen, setIsSortOpen] = useState(false); // Dropdown State
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -31,7 +35,6 @@ export default function CreatedQuizzes() {
       try {
         const { data } = await api.get(endpoints.quiz.myQuizzes("created"));
         setQuizzes(data.quizzes);
-        setFilteredQuizzes(data.quizzes);
       } catch (err) {
         toast.error("Failed to fetch quizzes");
       } finally {
@@ -41,22 +44,35 @@ export default function CreatedQuizzes() {
     fetchQuizzes();
   }, []);
 
-  // Search functionality
-  useEffect(() => {
-    if (searchQuery.trim() === "") {
-      setFilteredQuizzes(quizzes);
-    } else {
+  // Filtering & Sorting Logic
+  const filteredQuizzes = useMemo(() => {
+    // 1. Search Filter
+    let result = quizzes;
+    if (searchQuery.trim() !== "") {
       const lowerQuery = searchQuery.toLowerCase();
-      const filtered = quizzes.filter(
+      result = quizzes.filter(
         (quiz) =>
           quiz.title.toLowerCase().includes(lowerQuery) ||
           quiz.code.toLowerCase().includes(lowerQuery)
       );
-      setFilteredQuizzes(filtered);
     }
-  }, [searchQuery, quizzes]);
 
-  // scroll top
+    // 2. Sort Logic
+    result.sort((a, b) => {
+      const dateA = new Date(a.startTime || 0);
+      const dateB = new Date(b.startTime || 0);
+
+      if (sortOrder === "newest") {
+        return dateB - dateA;
+      } else {
+        return dateA - dateB;
+      }
+    });
+
+    return result;
+  }, [quizzes, searchQuery, sortOrder]);
+
+  // Scroll to Top Logic
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 300) {
@@ -79,9 +95,7 @@ export default function CreatedQuizzes() {
       return;
     try {
       await api.delete(endpoints.quiz.delete(quizId));
-      const updated = quizzes.filter((q) => q._id !== quizId);
-      setQuizzes(updated);
-      setFilteredQuizzes(updated);
+      setQuizzes((prev) => prev.filter((q) => q._id !== quizId));
       toast.success("Quiz deleted successfully");
     } catch (err) {
       toast.error("Failed to delete quiz");
@@ -96,11 +110,12 @@ export default function CreatedQuizzes() {
   const clearSearch = () => setSearchQuery("");
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 md:p-10 relative">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-10 relative">
       <div className="max-w-5xl mx-auto">
-        {/* Header & Search */}
-        <div className="flex flex-col md:flex-row gap-6 mb-10 justify-between items-start md:items-center">
-          <div className="flex items-center gap-4">
+        {/* Header & Controls */}
+        <div className="flex flex-col md:flex-row gap-6 mb-8 justify-between items-start md:items-center">
+          {/* Title Section */}
+          <div className="flex items-center gap-4 w-full md:w-auto">
             <button
               onClick={() => navigate("/dashboard")}
               className="p-3 bg-white hover:bg-gray-100 rounded-xl text-gray-500 shadow-sm border border-gray-200 transition"
@@ -117,18 +132,20 @@ export default function CreatedQuizzes() {
             </div>
           </div>
 
-          <div className="flex gap-3 w-full md:w-auto">
-            <div className="relative flex-1 md:w-72">
+          {/* Controls Section - Responsive Grid */}
+          <div className="w-full md:w-auto grid grid-cols-2 gap-3 md:flex md:items-center">
+            {/* Search Input - Full width on mobile top row */}
+            <div className="relative col-span-2 md:w-64 group">
               <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors"
                 size={18}
               />
               <input
                 type="text"
-                placeholder="Search by title or code..."
+                placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition text-sm font-medium shadow-sm"
+                className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all text-sm font-medium shadow-sm placeholder-gray-400"
               />
               {searchQuery && (
                 <button
@@ -139,11 +156,77 @@ export default function CreatedQuizzes() {
                 </button>
               )}
             </div>
+
+            {/* Custom Sort Dropdown */}
+            <div className="relative col-span-1 md:w-40">
+              <button
+                onClick={() => setIsSortOpen(!isSortOpen)}
+                className="w-full flex items-center justify-between pl-3 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:border-indigo-300 hover:bg-gray-50 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm"
+              >
+                <div className="flex items-center gap-2 truncate">
+                  {sortOrder === "newest" ? (
+                    <ArrowDown size={16} className="text-gray-500" />
+                  ) : (
+                    <ArrowUp size={16} className="text-gray-500" />
+                  )}
+                  <span>{sortOrder === "newest" ? "Newest" : "Oldest"}</span>
+                </div>
+                <ChevronDown
+                  size={14}
+                  className={`text-gray-400 transition-transform duration-200 ${
+                    isSortOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {/* Dropdown Menu */}
+              {isSortOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setIsSortOpen(false)}
+                  ></div>
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-xl shadow-xl z-20 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <button
+                      onClick={() => {
+                        setSortOrder("newest");
+                        setIsSortOpen(false);
+                      }}
+                      className={`w-full text-left px-4 py-3 text-sm font-medium flex items-center justify-between hover:bg-gray-50 transition-colors ${
+                        sortOrder === "newest"
+                          ? "text-indigo-600 bg-indigo-50/50"
+                          : "text-gray-700"
+                      }`}
+                    >
+                      <span>Newest First</span>
+                      {sortOrder === "newest" && <Check size={14} />}
+                    </button>
+                    <div className="h-px bg-gray-100"></div>
+                    <button
+                      onClick={() => {
+                        setSortOrder("oldest");
+                        setIsSortOpen(false);
+                      }}
+                      className={`w-full text-left px-4 py-3 text-sm font-medium flex items-center justify-between hover:bg-gray-50 transition-colors ${
+                        sortOrder === "oldest"
+                          ? "text-indigo-600 bg-indigo-50/50"
+                          : "text-gray-700"
+                      }`}
+                    >
+                      <span>Oldest First</span>
+                      {sortOrder === "oldest" && <Check size={14} />}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Create Button */}
             <button
               onClick={() => navigate("/create")}
-              className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition font-bold shadow-lg shadow-indigo-200 text-sm whitespace-nowrap flex items-center gap-2"
+              className="col-span-1 md:w-auto px-4 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-200 active:scale-95 transition-all font-bold shadow-md text-sm whitespace-nowrap flex items-center justify-center gap-2"
             >
-              <Plus size={18} /> Create New
+              <Plus size={18} /> New
             </button>
           </div>
         </div>
@@ -189,7 +272,7 @@ export default function CreatedQuizzes() {
                 className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 hover:shadow-md hover:border-indigo-200 transition-all duration-300 group relative"
               >
                 <div className="flex flex-col lg:flex-row lg:items-center gap-6">
-                  {/* Status Indicator Bar (Left side) */}
+                  {/* Status Indicator Bar */}
                   <div
                     className={`absolute left-0 top-0 bottom-0 w-1.5 rounded-l-2xl ${
                       quiz.status === "active"

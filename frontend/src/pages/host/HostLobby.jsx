@@ -10,9 +10,11 @@ import {
   Calendar,
   Edit,
   BarChart2,
-} from "lucide-react"; // Added BarChart2
+  CheckCircle2,
+} from "lucide-react";
 import toast from "react-hot-toast";
-import { formatDistanceToNow, differenceInSeconds } from "date-fns";
+import { differenceInSeconds } from "date-fns";
+import { TrophySpin } from "react-loading-indicators";
 
 export default function HostLobby() {
   const { quizId } = useParams();
@@ -40,22 +42,36 @@ export default function HostLobby() {
     }
   }, [quizId, socket]);
 
-  // Timer Logic
   useEffect(() => {
-    if (!quiz || quiz.status !== "scheduled") return;
+    if (!quiz) return;
+    if (quiz.status !== "scheduled" && quiz.status !== "active") return;
 
     const timer = setInterval(() => {
-      const start = new Date(quiz.startTime);
       const now = new Date();
-      const diff = differenceInSeconds(start, now);
+      let targetDate;
+      if (quiz.status === "scheduled") {
+        targetDate = new Date(quiz.startTime);
+      } else {
+        targetDate = new Date(quiz.endTime);
+      }
+
+      const diff = differenceInSeconds(targetDate, now);
 
       if (diff <= 0) {
-        setIsReadyToStart(true);
         setTimeLeft(0);
-        clearInterval(timer);
+
+        if (quiz.status === "scheduled") {
+          setIsReadyToStart(true);
+        } else if (quiz.status === "active") {
+          clearInterval(timer);
+          setQuiz((prev) => ({ ...prev, status: "completed" }));
+          toast.success("Time's up! Quiz completed.");
+        }
       } else {
-        setIsReadyToStart(false);
         setTimeLeft(diff);
+        if (quiz.status === "scheduled") {
+          setIsReadyToStart(false);
+        }
       }
     }, 1000);
 
@@ -74,7 +90,7 @@ export default function HostLobby() {
     try {
       await api.post(endpoints.quiz.startLive(quizId));
       toast.success("Quiz Started Live!");
-      fetchQuiz(); // Refresh to get active status
+      fetchQuiz();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to start");
     }
@@ -90,7 +106,6 @@ export default function HostLobby() {
     }
   };
 
-  // Feature: "Start Now" (Reschedules start time to current time)
   const handleRescheduleNow = async () => {
     if (
       !window.confirm("This will update the quiz start time to NOW. Continue?")
@@ -98,7 +113,6 @@ export default function HostLobby() {
       return;
 
     try {
-      // Set start time to 5 seconds ago to ensure it's valid
       const now = new Date();
       now.setSeconds(now.getSeconds() - 5);
 
@@ -107,13 +121,23 @@ export default function HostLobby() {
       });
 
       toast.success("Rescheduled to now!");
-      fetchQuiz(); // Refresh data to update timer
+      fetchQuiz();
     } catch (err) {
       toast.error("Failed to reschedule");
     }
   };
 
-  if (!quiz) return <div className="p-10 text-center">Loading...</div>;
+  if (!quiz)
+    return (
+      <div className="p-10 text-center flex justify-center">
+        <TrophySpin
+          color="#23eeff"
+          size="medium"
+          text="loading"
+          textColor="#0ae6f9"
+        />
+      </div>
+    );
 
   return (
     <div className="max-w-4xl mx-auto p-8 text-center">
@@ -152,8 +176,20 @@ export default function HostLobby() {
           <p className="font-bold capitalize text-lg">{quiz.status}</p>
         </div>
 
+        {/*TIMER CARD */}
         <div className="bg-white p-6 rounded-xl shadow-sm border flex flex-col items-center justify-center">
-          <Clock className="w-8 h-8 text-blue-500 mb-2" />
+          {quiz.status === "completed" ? (
+            <CheckCircle2 className="w-8 h-8 text-gray-400 mb-2" />
+          ) : (
+            <Clock
+              className={`w-8 h-8 mb-2 ${
+                quiz.status === "active"
+                  ? "text-green-600 animate-pulse"
+                  : "text-blue-500"
+              }`}
+            />
+          )}
+
           {quiz.status === "scheduled" ? (
             timeLeft > 0 ? (
               <div className="text-center">
@@ -165,17 +201,24 @@ export default function HostLobby() {
             ) : (
               <span className="text-green-600 font-bold">Ready to Start!</span>
             )
+          ) : quiz.status === "active" ? (
+            <div className="text-center">
+              <p className="text-2xl font-mono font-bold text-green-600">
+                {formatTime(timeLeft)}
+              </p>
+              <p className="text-xs text-gray-400">remaining</p>
+            </div>
           ) : (
-            <span className="text-gray-500">
-              {quiz.status === "active" ? "Quiz in Progress" : "Quiz Ended"}
-            </span>
+            <div className="text-center">
+              <span className="text-gray-500 font-bold block">Quiz Ended</span>
+              <span className="text-xs text-gray-400">Time expired</span>
+            </div>
           )}
         </div>
       </div>
 
       {/* Control Area */}
       <div className="flex flex-col items-center gap-4">
-        {/* === NEW BUTTON ADDED HERE === */}
         {(quiz.status === "active" || quiz.status === "completed") && (
           <button
             onClick={() => navigate(`/host/live-dashboard/${quizId}`)}
@@ -188,7 +231,6 @@ export default function HostLobby() {
         {/* Scheduled State Controls */}
         {quiz.status === "scheduled" && (
           <div className="space-y-4 w-full max-w-md">
-            {/* Start Button - Disabled if timer > 0 */}
             <button
               onClick={startQuiz}
               disabled={!isReadyToStart}
@@ -202,7 +244,6 @@ export default function HostLobby() {
               {isReadyToStart ? "Start Quiz Live" : `Wait for Timer`}
             </button>
 
-            {/* Reschedule Options */}
             {!isReadyToStart && (
               <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
                 <p className="text-sm text-blue-800 mb-3">
@@ -233,7 +274,7 @@ export default function HostLobby() {
             onClick={endQuiz}
             className="flex items-center gap-2 px-8 py-4 bg-red-600 text-white rounded-xl text-xl font-bold hover:bg-red-700 shadow-lg hover:shadow-red-200 transition-all"
           >
-            <StopCircle /> End Quiz
+            <StopCircle /> End Quiz Early
           </button>
         )}
 

@@ -14,7 +14,7 @@ export default function QuestionForm({
       { text: "", isCorrect: false },
       { text: "", isCorrect: false },
     ],
-    correctAnswers: [], // For fill-blank
+    correctAnswers: [],
     points: 1,
     timeLimit: 30,
     explanation: "",
@@ -24,7 +24,6 @@ export default function QuestionForm({
     if (initialData) {
       setFormData({
         ...initialData,
-        // Ensure options exist for MCQ/Multiple
         options: initialData.options?.length
           ? initialData.options
           : [{ text: "", isCorrect: false }],
@@ -43,11 +42,9 @@ export default function QuestionForm({
     const newOptions = [...formData.options];
 
     if (formData.questionType === "mcq") {
-      // Reset all others for MCQ
       newOptions.forEach((opt) => (opt.isCorrect = false));
       newOptions[index].isCorrect = true;
     } else {
-      // Toggle for multiple-correct
       newOptions[index].isCorrect = !newOptions[index].isCorrect;
     }
 
@@ -70,8 +67,6 @@ export default function QuestionForm({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
-    // Validation
     if (formData.questionType !== "fill-blank") {
       const hasCorrect = formData.options.some((o) => o.isCorrect);
       if (!hasCorrect) return alert("Please mark at least one correct option");
@@ -205,7 +200,7 @@ export default function QuestionForm({
             className="w-full p-2 border rounded text-sm"
           />
         </div>
-        <div>
+        {/* <div>
           <label className="block text-xs font-medium text-gray-500 mb-1">
             Time (sec)
           </label>
@@ -219,7 +214,7 @@ export default function QuestionForm({
             }
             className="w-full p-2 border rounded text-sm"
           />
-        </div>
+        </div> */}
         <div className="col-span-2 flex items-end gap-3 justify-end">
           <button
             type="button"

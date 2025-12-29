@@ -47,8 +47,6 @@ class GeminiService {
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
-
-      // Extract JSON from response (in case there's extra text)
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         return JSON.parse(jsonMatch[0]);

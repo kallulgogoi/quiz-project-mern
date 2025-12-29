@@ -750,7 +750,7 @@ exports.endQuizLive = async (req, res) => {
   }
 };
 
-// Get Quiz By ID (UPDATED to allow participants)
+// Get Quiz By ID
 exports.getQuizById = async (req, res) => {
   try {
     const { quizId } = req.params;
@@ -764,7 +764,7 @@ exports.getQuizById = async (req, res) => {
         .json({ success: false, message: "Quiz not found" });
     }
 
-    // --- CHECK: HOST OR PARTICIPANT ---
+    // CHECK: HOST OR PARTICIPANT
     const isHost = quiz.host.toString() === req.user._id.toString();
     const isParticipant = quiz.participants.some(
       (p) => p._id.toString() === req.user._id.toString()

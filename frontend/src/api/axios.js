@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:5000/api",
+  baseURL: import.meta.env.VITE_API_BASE_URL,
 });
 
 api.interceptors.request.use((config) => {
@@ -32,8 +32,6 @@ export const endpoints = {
     leaderboard: (id) => `/quizzes/${id}/leaderboard`,
     startLive: (id) => `/quizzes/${id}/start-live`,
     endLive: (id) => `/quizzes/${id}/end-live`,
-
-    // *** ADD THIS LINE HERE ***
     attempt: (id) => `/quizzes/${id}/attempt`,
   },
   ai: {

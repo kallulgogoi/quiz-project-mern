@@ -90,7 +90,7 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Update updatedAt timestamp
+// updatedAt timestamp
 userSchema.pre("save", function (next) {
   this.updatedAt = Date.now();
   next();

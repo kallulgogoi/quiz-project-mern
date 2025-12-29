@@ -13,7 +13,10 @@ import {
   CheckCircle2,
   Search,
   Filter,
-  ArrowUp, // Added ArrowUp icon
+  ArrowUp,
+  ArrowDown,
+  ChevronDown,
+  Check, // Added Check icon
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { format } from "date-fns";
@@ -22,7 +25,9 @@ export default function ParticipatedQuizzes() {
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [showScrollTop, setShowScrollTop] = useState(false); // State for scroll button
+  const [sortOrder, setSortOrder] = useState("newest");
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [isSortOpen, setIsSortOpen] = useState(false); // New state for custom dropdown
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -43,7 +48,6 @@ export default function ParticipatedQuizzes() {
     fetchQuizzes();
   }, []);
 
-  // --- SCROLL TO TOP LOGIC ---
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 300) {
@@ -61,7 +65,7 @@ export default function ParticipatedQuizzes() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // stats
+  // Stats Logic
   const stats = useMemo(() => {
     const totalTaken = quizzes.length;
     const totalScore = quizzes.reduce(
@@ -77,17 +81,33 @@ export default function ParticipatedQuizzes() {
     return { totalTaken, avgScore, bestRank };
   }, [quizzes]);
 
-  //  FILTERING
-  const filteredQuizzes = quizzes.filter((q) =>
-    q.title?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filtering & Sorting
+  const processedQuizzes = useMemo(() => {
+    let result = quizzes.filter((q) =>
+      q.title?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    result.sort((a, b) => {
+      const dateA = new Date(a.dateTaken || 0);
+      const dateB = new Date(b.dateTaken || 0);
+
+      if (sortOrder === "newest") {
+        return dateB - dateA;
+      } else {
+        return dateA - dateB;
+      }
+    });
+
+    return result;
+  }, [quizzes, searchTerm, sortOrder]);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 md:p-10 relative">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-10 relative">
       <div className="max-w-5xl mx-auto">
-        {/* Header & Search */}
-        <div className="flex flex-col md:flex-row gap-6 mb-10 justify-between items-start md:items-center">
-          <div className="flex items-center gap-4">
+        {/* Header & Controls */}
+        <div className="flex flex-col md:flex-row gap-6 mb-8 justify-between items-start md:items-center">
+          {/* Title Section */}
+          <div className="flex items-center gap-4 w-full md:w-auto">
             <button
               onClick={() => navigate("/dashboard")}
               className="p-3 bg-white hover:bg-gray-100 rounded-xl text-gray-500 shadow-sm border border-gray-200 transition"
@@ -100,23 +120,91 @@ export default function ParticipatedQuizzes() {
             </div>
           </div>
 
-          <div className="flex gap-3 w-full md:w-auto">
-            <div className="relative flex-1 md:w-72">
+          {/* Controls Section - Improved Mobile Grid */}
+          <div className="w-full md:w-auto grid grid-cols-2 gap-3 md:flex md:items-center">
+            {/* Search Input - Forces full width on mobile top row */}
+            <div className="relative col-span-2 md:w-64 group">
               <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors"
                 size={18}
               />
               <input
                 type="text"
-                placeholder="Search by quiz title..."
+                placeholder="Search quiz..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition text-sm font-medium shadow-sm"
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all text-sm font-medium shadow-sm placeholder-gray-400"
               />
             </div>
+
+            {/* Custom Sort Dropdown - Half width on mobile row 2 */}
+            <div className="relative col-span-1 md:w-40">
+              <button
+                onClick={() => setIsSortOpen(!isSortOpen)}
+                className="w-full flex items-center justify-between pl-3 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:border-indigo-300 hover:bg-gray-50 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm"
+              >
+                <div className="flex items-center gap-2 truncate">
+                  {sortOrder === "newest" ? (
+                    <ArrowDown size={16} className="text-gray-500" />
+                  ) : (
+                    <ArrowUp size={16} className="text-gray-500" />
+                  )}
+                  <span>{sortOrder === "newest" ? "Newest" : "Oldest"}</span>
+                </div>
+                <ChevronDown
+                  size={14}
+                  className={`text-gray-400 transition-transform duration-200 ${
+                    isSortOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {/* Dropdown Menu */}
+              {isSortOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setIsSortOpen(false)}
+                  ></div>
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-xl shadow-xl z-20 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <button
+                      onClick={() => {
+                        setSortOrder("newest");
+                        setIsSortOpen(false);
+                      }}
+                      className={`w-full text-left px-4 py-3 text-sm font-medium flex items-center justify-between hover:bg-gray-50 transition-colors ${
+                        sortOrder === "newest"
+                          ? "text-indigo-600 bg-indigo-50/50"
+                          : "text-gray-700"
+                      }`}
+                    >
+                      <span>Newest First</span>
+                      {sortOrder === "newest" && <Check size={14} />}
+                    </button>
+                    <div className="h-px bg-gray-100"></div>
+                    <button
+                      onClick={() => {
+                        setSortOrder("oldest");
+                        setIsSortOpen(false);
+                      }}
+                      className={`w-full text-left px-4 py-3 text-sm font-medium flex items-center justify-between hover:bg-gray-50 transition-colors ${
+                        sortOrder === "oldest"
+                          ? "text-indigo-600 bg-indigo-50/50"
+                          : "text-gray-700"
+                      }`}
+                    >
+                      <span>Oldest First</span>
+                      {sortOrder === "oldest" && <Check size={14} />}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Join Button - Half width on mobile row 2 */}
             <button
               onClick={() => navigate("/join")}
-              className="px-5 py-2.5 bg-gray-900 text-white rounded-xl hover:bg-black transition font-bold shadow-lg shadow-gray-200 text-sm whitespace-nowrap"
+              className="col-span-1 md:w-auto px-4 py-2.5 bg-gray-900 text-white rounded-xl hover:bg-black hover:shadow-lg hover:shadow-gray-300 active:scale-95 transition-all font-bold shadow-md text-sm whitespace-nowrap flex items-center justify-center"
             >
               Join New
             </button>
@@ -155,7 +243,7 @@ export default function ParticipatedQuizzes() {
               />
             ))}
           </div>
-        ) : filteredQuizzes.length === 0 ? (
+        ) : processedQuizzes.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
             <div className="w-16 h-16 bg-gray-50 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-4">
               <Filter size={32} />
@@ -179,14 +267,14 @@ export default function ParticipatedQuizzes() {
           </div>
         ) : (
           <div className="grid gap-4">
-            {filteredQuizzes.map((quiz) => (
+            {processedQuizzes.map((quiz) => (
               <QuizCard key={quiz._id} quiz={quiz} navigate={navigate} />
             ))}
           </div>
         )}
       </div>
 
-      {/* SCROLL TO TOP BUTTON*/}
+      {/* SCROLL TO TOP BUTTON */}
       {showScrollTop && (
         <button
           onClick={scrollToTop}
@@ -199,8 +287,6 @@ export default function ParticipatedQuizzes() {
     </div>
   );
 }
-
-// Helper Components
 
 function StatCard({ icon, label, value, color }) {
   const colors = {
@@ -318,13 +404,20 @@ function QuizCard({ quiz, navigate }) {
           </div>
         </div>
 
-        {/* Action */}
-        <button
-          onClick={() => navigate(`/attempt/${quiz._id}`)}
-          className="w-full lg:w-auto px-6 py-3 bg-white border-2 border-gray-100 text-gray-600 font-bold rounded-xl hover:border-indigo-600 hover:text-indigo-600 transition flex items-center justify-center gap-2 whitespace-nowrap lg:self-center"
-        >
-          View Report <ChevronRight size={18} />
-        </button>
+        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto mt-2 lg:mt-0">
+          <button
+            onClick={() => navigate(`/result/${quiz._id}`)}
+            className="flex-1 lg:flex-none px-5 py-2.5 bg-white border-2 border-gray-100 text-gray-600 font-bold rounded-xl hover:border-green-600 hover:text-green-600 transition flex items-center justify-center gap-2 text-sm whitespace-nowrap"
+          >
+            Results <ChevronRight size={16} />
+          </button>
+          <button
+            onClick={() => navigate(`/attempt/${quiz._id}`)}
+            className="flex-1 lg:flex-none px-5 py-2.5 bg-white border-2 border-gray-100 text-gray-600 font-bold rounded-xl hover:border-red-600 hover:text-red-600 transition flex items-center justify-center gap-2 text-sm whitespace-nowrap"
+          >
+            Report <ChevronRight size={16} />
+          </button>
+        </div>
       </div>
     </div>
   );

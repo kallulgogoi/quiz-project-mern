@@ -19,7 +19,6 @@ export default function CreateQuiz() {
     title: "",
     description: "",
     startTime: "",
-    // endTime is removed from state
     duration: 30, // minutes
     settings: {
       showLeaderboard: true,
@@ -43,19 +42,16 @@ export default function CreateQuiz() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // --- VALIDATION START ---
     if (!formData.title) return toast.error("Please enter a title");
     if (!formData.startTime) return toast.error("Please set the start time");
 
     const start = new Date(formData.startTime);
     const now = new Date();
 
-    // 1. Check if Start Time is in the future
+    // Check if Start Time is in the future
     if (start < now) {
       return toast.error("Start time must be in the future");
     }
-    // --- VALIDATION END ---
 
     setLoading(true);
     try {
@@ -72,12 +68,12 @@ export default function CreateQuiz() {
 
   return (
     <div className="min-h-screen bg-gray-50/50 pb-20">
-      {/* Sticky Header */}
+      {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-16 z-10 shadow-sm px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-800">Create New Quiz</h1>
           <button
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/created-quizzes")}
             className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition"
           >
             <X size={24} />
@@ -87,7 +83,7 @@ export default function CreateQuiz() {
 
       <div className="max-w-5xl mx-auto px-6 py-10">
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Section 1: Basic Info */}
+          {/*Basic Info */}
           <section className="grid md:grid-cols-3 gap-6">
             <div className="md:col-span-1">
               <h3 className="text-lg font-bold text-gray-800 mb-2">
@@ -130,7 +126,7 @@ export default function CreateQuiz() {
 
           <hr className="border-gray-200" />
 
-          {/* Section 2: Schedule */}
+          {/* Schedule */}
           <section className="grid md:grid-cols-3 gap-6">
             <div className="md:col-span-1">
               <h3 className="text-lg font-bold text-gray-800 mb-2">
@@ -182,7 +178,7 @@ export default function CreateQuiz() {
 
           <hr className="border-gray-200" />
 
-          {/* Section 3: Configuration */}
+          {/* Config */}
           <section className="grid md:grid-cols-3 gap-6">
             <div className="md:col-span-1">
               <h3 className="text-lg font-bold text-gray-800 mb-2">
@@ -240,8 +236,7 @@ export default function CreateQuiz() {
                     className="w-6 h-6 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
                   />
                 </label>
-
-                <label className="flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50/30 transition cursor-pointer group">
+                {/* <label className="flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50/30 transition cursor-pointer group">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-blue-100 text-blue-600 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition">
                       <Settings size={18} />
@@ -262,7 +257,7 @@ export default function CreateQuiz() {
                     onChange={handleChange}
                     className="w-6 h-6 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
                   />
-                </label>
+                </label> */}
               </div>
             </div>
           </section>

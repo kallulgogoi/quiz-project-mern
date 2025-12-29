@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api, { endpoints } from "../../api/axios";
+import { TrophySpin } from "react-loading-indicators";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -12,7 +13,7 @@ import {
   Timer,
   Download,
   Loader2,
-  ArrowUp, // Added ArrowUp icon
+  ArrowUp,
 } from "lucide-react";
 import { format, differenceInMinutes } from "date-fns";
 import toast from "react-hot-toast";
@@ -42,7 +43,6 @@ export default function QuizAttemptDetails() {
     fetchAttempt();
   }, [quizId]);
 
-  // --- SCROLL TO TOP LOGIC ---
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 300) {
@@ -59,7 +59,6 @@ export default function QuizAttemptDetails() {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-  // ---------------------------
 
   const handleDownloadCertificate = () => {
     if (!attempt?.quiz?.certificateTemplate) return;
@@ -110,7 +109,12 @@ export default function QuizAttemptDetails() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-10 h-10 text-gray-900 animate-spin" />
+        <TrophySpin
+          color="#23eeff"
+          size="medium"
+          text="loading"
+          textColor="#0ae6f9"
+        />
       </div>
     );
   }
@@ -152,7 +156,7 @@ export default function QuizAttemptDetails() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 relative">
-      {/* Header (Standard, not fixed) */}
+      {/* Header*/}
       <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-5xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-4">

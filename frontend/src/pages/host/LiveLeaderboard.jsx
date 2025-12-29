@@ -105,7 +105,6 @@ export default function LiveLeaderboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 font-sans selection:bg-indigo-100 selection:text-indigo-700">
-      {/* --- Glassmorphism Header --- */}
       <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-4 w-full sm:w-auto">
@@ -120,7 +119,7 @@ export default function LiveLeaderboard() {
                 <Activity className="text-indigo-600" size={20} />
                 Live Dashboard
               </h1>
-              <p className="text-sm font-medium text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
+              <p className="text-sm font-medium text-transparent bg-clip-text bg-linear-to-r from-indigo-600 to-purple-600">
                 {quizTitle}
               </p>
             </div>
@@ -143,7 +142,6 @@ export default function LiveLeaderboard() {
       </div>
 
       <div className="max-w-7xl mx-auto p-4 sm:p-6 grid lg:grid-cols-3 gap-6 lg:gap-8 mt-4">
-        {/* --- Left Column: Leaderboard --- */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/50 overflow-hidden">
             <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-white to-gray-50">
@@ -194,9 +192,24 @@ export default function LiveLeaderboard() {
                     {/* Avatar & User Info */}
                     <div className="flex-1 flex items-center gap-4">
                       <img
-                        src={`https://ui-avatars.com/api/?name=${entry.user?.username}&background=random&color=fff&bold=true`}
-                        alt="Avatar"
-                        className="w-10 h-10 rounded-full shadow-sm"
+                        src={
+                          entry.user?.profilePicture
+                            ? entry.user.profilePicture
+                            : `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                entry.user?.username || "User"
+                              )}&background=random&color=fff&bold=true`
+                        }
+                        onError={(e) => {
+                          e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                            entry.user?.username || "User"
+                          )}&background=random&color=fff&bold=true`;
+                        }}
+                        alt={
+                          entry.user?.username
+                            ? `${entry.user.username}'s avatar`
+                            : "User avatar"
+                        }
+                        className="w-10 h-10 rounded-full shadow-sm object-cover"
                       />
                       <div>
                         <div className="flex items-center gap-2">

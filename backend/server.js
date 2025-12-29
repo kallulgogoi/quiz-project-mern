@@ -21,7 +21,7 @@ const connectDB = require("./config/db");
 const app = express();
 const server = http.createServer(app);
 
-// --- SOCKET SETUP ---
+//SOCKET SETUP
 const io = socketIo(server, {
   cors: {
     // Allow both localhost and your potential production URL
@@ -44,24 +44,14 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// --- SOCKET LOGIC ---
+// SOCKET LOGIC
 io.on("connection", (socket) => {
   console.log("New client connected:", socket.id);
-
-  // 1. MATCH FRONTEND EVENT NAME
-  // Frontend: socket.emit("join-quiz-room", quizId);
   socket.on("join-quiz-room", (quizId) => {
     socket.join(`quiz-${quizId}`);
     console.log(`Socket ${socket.id} joined room: quiz-${quizId}`);
   });
-
-  // Note: We REMOVED 'socket.on("quiz-started")' because your
-  // quizController.js (startQuizLive) handles the broadcasting.
-  // Doing it here would be redundant.
-
-  // Optional: Real-time Answer Feed (if you want live dashboard updates)
   socket.on("submit-answer", (data) => {
-    // Notify host only (if you have a specific host room) or the whole room
     io.to(`quiz-${data.quizId}`).emit("answer-submitted", data);
   });
 
@@ -69,8 +59,6 @@ io.on("connection", (socket) => {
     console.log("Client disconnected");
   });
 });
-
-// Make io available to routes (Crucial for Controller)
 app.set("io", io);
 
 // Routes

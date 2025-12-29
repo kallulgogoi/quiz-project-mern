@@ -1,8 +1,6 @@
 const geminiService = require("../services/geminiService");
 const Question = require("../models/Question");
 const Quiz = require("../models/Quiz");
-
-// Generate Questions with AI
 exports.generateQuestions = async (req, res) => {
   try {
     const {

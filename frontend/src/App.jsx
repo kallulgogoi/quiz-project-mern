@@ -7,8 +7,6 @@ import Layout from "./components/Layout";
 
 // Landing Page
 import LandingPage from "./pages/LandingPage";
-
-// ... (Keep all your existing imports) ...
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import VerifyOTP from "./pages/auth/VerifyOTP";
@@ -26,12 +24,9 @@ import TakeQuiz from "./pages/participant/TakeQuiz";
 import Result from "./pages/participant/Result";
 import QuizAttemptDetails from "./pages/participant/QuizAttemptDetails";
 import Profile from "./pages/Profile";
-
-// Helper component to redirect if already logged in
 const PublicRoute = ({ children }) => {
   const { user, loading } = useAuth();
   if (loading) return null;
-  // If user is logged in, send them to dashboard instead of landing/login
   if (user) return <Navigate to="/dashboard" replace />;
   return children;
 };
@@ -43,7 +38,7 @@ function App() {
         <SocketProvider>
           <Toaster position="top-center" />
           <Routes>
-            {/* --- PUBLIC ROUTES --- */}
+            {/*PUBLIC ROUTES*/}
             <Route
               path="/"
               element={
@@ -70,7 +65,7 @@ function App() {
             />
             <Route path="/verify-otp" element={<VerifyOTP />} />
 
-            {/* --- PROTECTED ROUTES --- */}
+            {/* PROTECTED ROUTES*/}
             <Route element={<ProtectedRoute />}>
               <Route element={<Layout />}>
                 <Route path="/dashboard" element={<Dashboard />} />

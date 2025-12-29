@@ -188,7 +188,7 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Check if user has password (Google users might not have)
+    // Check if user has password
     if (!user.password) {
       return res.status(401).json({
         success: false,

@@ -115,7 +115,6 @@ export default function Profile() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-8">
-          {/* LEFT COLUMN: Profile Details */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 h-fit transition-shadow hover:shadow-lg">
             <h2 className="text-lg font-bold font-Merriweather text-gray-800 mb-6 flex items-center gap-2 pb-4 border-b border-gray-100">
               <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
@@ -136,7 +135,7 @@ export default function Profile() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-gray-400">
+                      <div className="w-full h-full bg-linear-to-br from-gray-100 to-gray-200 flex items-center justify-center text-gray-400">
                         <User size={48} />
                       </div>
                     )}
@@ -207,8 +206,6 @@ export default function Profile() {
               </button>
             </form>
           </div>
-
-          {/* RIGHT COLUMN: Change Password */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 h-fit transition-shadow hover:shadow-lg">
             <h2 className="text-lg font-bold font-Merriweather text-gray-800 mb-6 flex items-center gap-2 pb-4 border-b border-gray-100">
               <div className="p-2 bg-green-50 text-green-600 rounded-lg">

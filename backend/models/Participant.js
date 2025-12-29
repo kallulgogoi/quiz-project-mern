@@ -54,8 +54,6 @@ const participantSchema = new mongoose.Schema({
     type: Date,
   },
 });
-
-// Compound index for unique participation per quiz
 participantSchema.index({ quiz: 1, user: 1 }, { unique: true });
 
 // Calculate rank pre-save

@@ -10,6 +10,7 @@ import {
   Send,
   AlertCircle,
 } from "lucide-react";
+import { TrophySpin } from "react-loading-indicators";
 import { differenceInSeconds } from "date-fns";
 import toast from "react-hot-toast";
 
@@ -23,24 +24,16 @@ export default function TakeQuiz() {
   const [answers, setAnswers] = useState({});
   const [timeLeft, setTimeLeft] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Use a ref to track submission status inside intervals/effects without dependencies
   const isSubmittingRef = useRef(false);
-
-  // 1. Fetch Quiz Data & Calculate Time
   useEffect(() => {
     const startQuiz = async () => {
       try {
         const { data } = await api.post(endpoints.quiz.start(quizId));
         setQuestions(data.questions);
         setQuizMeta(data.quiz);
-
-        // Calculate initial time remaining based on server End Time
         const endTime = new Date(data.quiz.endTime);
         const now = new Date();
         const diff = differenceInSeconds(endTime, now);
-
-        // Prevent negative time if user joins late
         setTimeLeft(diff > 0 ? diff : 0);
       } catch (err) {
         toast.error(err.response?.data?.message || "Error starting quiz");
@@ -49,21 +42,15 @@ export default function TakeQuiz() {
     };
     startQuiz();
   }, [quizId, navigate]);
-
-  // 2. Submission Logic
   const submitQuiz = useCallback(
     async (autoSubmit = false) => {
       if (isSubmittingRef.current) return;
       isSubmittingRef.current = true;
       setIsSubmitting(true);
-
-      // Format answers for backend
       const formattedAnswers = Object.entries(answers).map(([qId, val]) => ({
         questionId: qId,
         answer: val,
       }));
-
-      // If auto-submitting, use a different toast message or none
       let loadingToast;
       if (!autoSubmit) {
         loadingToast = toast.loading("Submitting quiz...");
@@ -82,8 +69,6 @@ export default function TakeQuiz() {
         console.error(err);
         if (loadingToast)
           toast.error("Submission failed", { id: loadingToast });
-
-        // Reset flags if it failed so they can try again (unless it was auto-submit, then we probably want to force exit)
         if (!autoSubmit) {
           isSubmittingRef.current = false;
           setIsSubmitting(false);
@@ -92,12 +77,8 @@ export default function TakeQuiz() {
     },
     [answers, quizId, navigate]
   );
-
-  // 3. Timer Logic (Auto-Submit on 0)
   useEffect(() => {
-    if (timeLeft === null) return; // Wait for fetch
-
-    // FIX: If time is already up, trigger submit asynchronously to avoid React error
+    if (timeLeft === null) return;
     if (timeLeft <= 0) {
       setTimeout(() => {
         submitQuiz(true);
@@ -109,7 +90,6 @@ export default function TakeQuiz() {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          // Calling submit here is safe because it's inside an interval callback (async)
           submitQuiz(true);
           return 0;
         }
@@ -119,10 +99,7 @@ export default function TakeQuiz() {
 
     return () => clearInterval(timer);
   }, [timeLeft, submitQuiz]);
-
-  // 4. Handle Selection/Input
   const handleAnswer = (val, type) => {
-    // Prevent changing answers if submitting
     if (isSubmitting) return;
 
     const currentQId = questions[currentIndex]._id;
@@ -146,12 +123,15 @@ export default function TakeQuiz() {
       }));
     }
   };
-
-  // 5. Render States
   if (!questions.length || timeLeft === null) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
-        <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mb-4" />
+        <TrophySpin
+          color="#23eeff"
+          size="medium"
+          text="loading"
+          textColor="#0ae6f9"
+        />
         <p className="text-gray-500 font-medium">Preparing your quiz...</p>
       </div>
     );
@@ -160,15 +140,13 @@ export default function TakeQuiz() {
   const currentQ = questions[currentIndex];
   const currentAnswer = answers[currentQ._id];
   const progressPercentage = ((currentIndex + 1) / questions.length) * 100;
-
-  // Formatting Timer visual
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}:${String(s).padStart(2, "0")}`;
   };
 
-  const isTimeCritical = timeLeft < 60; // Less than 1 min
+  const isTimeCritical = timeLeft < 60;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">

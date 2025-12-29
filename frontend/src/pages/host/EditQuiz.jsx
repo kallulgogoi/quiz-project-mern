@@ -35,9 +35,6 @@ export default function EditQuiz() {
       try {
         const { data } = await api.get(endpoints.quiz.getById(quizId));
         const quiz = data.quiz;
-
-        // Format dates for datetime-local input (YYYY-MM-DDThh:mm)
-        // Kept logic as is for functionality
         const formatDateForInput = (dateString) => {
           if (!dateString) return "";
           const date = new Date(dateString);
@@ -60,7 +57,7 @@ export default function EditQuiz() {
         });
       } catch (err) {
         toast.error("Failed to load quiz data");
-        navigate("/");
+        navigate("/created-quizzes");
       } finally {
         setLoading(false);
       }
@@ -87,7 +84,7 @@ export default function EditQuiz() {
     try {
       await api.put(endpoints.quiz.update(quizId), formData);
       toast.success("Quiz updated successfully!");
-      navigate("/");
+      navigate("/created-quizzes");
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to update quiz");
     } finally {
@@ -106,7 +103,7 @@ export default function EditQuiz() {
   return (
     <div className="max-w-3xl mx-auto p-4 md:p-6 min-h-screen bg-gray-50/50">
       <button
-        onClick={() => navigate("/")}
+        onClick={() => navigate("/created-quizzes")}
         className="flex items-center text-gray-500 hover:text-gray-800 mb-6 transition"
       >
         <ArrowLeft size={20} className="mr-2" /> Back to Dashboard
@@ -210,7 +207,7 @@ export default function EditQuiz() {
                   name="settings.showLeaderboard"
                   checked={formData.settings.showLeaderboard}
                   onChange={handleChange}
-                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 flex-shrink-0"
+                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 shrink-0"
                 />
                 <div>
                   <span className="block font-medium text-gray-700">
@@ -228,7 +225,7 @@ export default function EditQuiz() {
                   name="settings.shuffleQuestions"
                   checked={formData.settings.shuffleQuestions}
                   onChange={handleChange}
-                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 flex-shrink-0"
+                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 shrink-0"
                 />
                 <div>
                   <span className="block font-medium text-gray-700">
@@ -236,24 +233,6 @@ export default function EditQuiz() {
                   </span>
                   <span className="text-xs text-gray-500">
                     Randomize question order for each participant
-                  </span>
-                </div>
-              </label>
-
-              <label className="flex items-center gap-3 cursor-pointer p-2 hover:bg-gray-100 rounded-lg transition">
-                <input
-                  type="checkbox"
-                  name="settings.allowMultipleAttempts"
-                  checked={formData.settings.allowMultipleAttempts}
-                  onChange={handleChange}
-                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 flex-shrink-0"
-                />
-                <div>
-                  <span className="block font-medium text-gray-700">
-                    Allow Multiple Attempts
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    Users can retake the quiz
                   </span>
                 </div>
               </label>
