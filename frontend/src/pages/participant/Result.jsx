@@ -1,12 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import api, { endpoints } from "../../api/axios";
-import { Trophy, Medal, Home, Crown } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
+import { Trophy, Medal, Home, Crown, Search, User } from "lucide-react";
 import { TrophySpin } from "react-loading-indicators";
 export default function Result() {
   const { quizId } = useParams();
+  const { user } = useAuth();
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -14,7 +17,7 @@ export default function Result() {
         const lbRes = await api.get(endpoints.quiz.leaderboard(quizId));
         setLeaderboard(lbRes.data.leaderboard || []);
       } catch (err) {
-        console.error("Failed to fetch leaderboard:", err);
+        console.error(err);
       } finally {
         setLoading(false);
       }
@@ -22,153 +25,182 @@ export default function Result() {
     fetchData();
   }, [quizId]);
 
+  const myResult = useMemo(() => {
+    if (!user || leaderboard.length === 0) return null;
+    const index = leaderboard.findIndex(
+      (entry) => entry.user?._id === user._id
+    );
+    if (index === -1) return null;
+    return { ...leaderboard[index], rank: index + 1 };
+  }, [leaderboard, user]);
+
+  const filteredLeaderboard = useMemo(() => {
+    return leaderboard.filter((entry) =>
+      (entry.user?.username || "Anonymous")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase())
+    );
+  }, [leaderboard, searchTerm]);
+
+  const getRankStyle = (index) => {
+    if (index === 0) return "from-yellow-400 to-amber-500 shadow-yellow-200";
+    if (index === 1) return "from-gray-300 to-gray-400 shadow-gray-200";
+    if (index === 2) return "from-orange-400 to-amber-600 shadow-orange-200";
+    return "from-blue-500 to-indigo-600 shadow-blue-200";
+  };
+
+  const getRankIcon = (index) => {
+    if (index === 0) return <Crown className="w-6 h-6 text-white" />;
+    if (index < 3) return <Medal className="w-6 h-6 text-white" />;
+    return <span className="text-xl text-white font-bold">#{index + 1}</span>;
+  };
+
+  // Helper to truncate text
+  const truncateName = (name) => {
+    if (!name) return "Anonymous";
+    return name.length > 8 ? name.substring(0, 8) + ".." : name;
+  };
+
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-        <TrophySpin color="#23eeff" size="medium" text="" textColor="#0ae6f9" />
-        <p className="text-xl text-gray-600">Calculating results...</p>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <TrophySpin color="#4f46e5" size="medium" text="" textColor="" />
       </div>
     );
   }
 
-  const getRankStyle = (index) => {
-    if (index === 0)
-      return "from-yellow-400 to-amber-500 text-yellow-700 shadow-yellow-200";
-    if (index === 1)
-      return "from-gray-300 to-gray-400 text-gray-700 shadow-gray-200";
-    if (index === 2)
-      return "from-orange-400 to-amber-600 text-orange-700 shadow-orange-200";
-    return "from-blue-500 to-indigo-600 text-blue-700 shadow-blue-200";
-  };
-
-  const getRankIcon = (index) => {
-    if (index === 0) return <Crown className="w-7 h-7" />;
-    if (index === 1 || index === 2) return <Medal className="w-7 h-7" />;
-    return null;
-  };
-
   return (
-    <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-purple-50 py-12 px-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <div className="inline-block p-6 bg-linear-to-br from-yellow-100 to-amber-100 rounded-full mb-6 shadow-lg">
-            <Trophy className="w-16 h-16 text-yellow-600 drop-shadow-md" />
+    <div className="min-h-screen bg-gray-50 py-10 px-4">
+      <div className="max-w-3xl mx-auto">
+        <div className="text-center mb-10">
+          <div className="inline-flex p-4 bg-white rounded-full shadow-md mb-4">
+            <Trophy className="w-10 h-10 text-yellow-500" />
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-3">
-            Quiz Completed!
-          </h1>
-          <p className="text-xl text-gray-600">
-            See how you and others performed
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900">Leaderboard</h1>
+          <p className="text-gray-500">Final Results</p>
         </div>
 
-        {/* Leaderboard */}
-        <div className="space-y-4">
-          {leaderboard.length === 0 ? (
-            <div className="bg-white rounded-2xl shadow-md p-12 text-center">
-              <p className="text-xl text-gray-500">No results available yet.</p>
+        {myResult && (
+          <div className="bg-indigo-600 rounded-2xl shadow-xl p-6 mb-8 text-white flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center text-2xl font-bold">
+                #{myResult.rank}
+              </div>
+              <div>
+                <h2 className="text-xl font-bold">Your Ranking</h2>
+                <p className="text-indigo-200 text-sm">
+                  Well done, {truncateName(user.username)}!
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-3xl font-bold">{myResult.totalScore}</p>
+              <p className="text-xs text-indigo-200 uppercase font-bold">
+                Points
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div className="relative mb-6">
+          <Search className="absolute left-4 top-3.5 text-gray-400" size={20} />
+          <input
+            type="text"
+            placeholder="Search participants..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition shadow-sm"
+          />
+        </div>
+
+        <div className="space-y-3">
+          {filteredLeaderboard.length === 0 ? (
+            <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
+              <p className="text-gray-500">No participants found.</p>
             </div>
           ) : (
-            leaderboard.map((entry, index) => (
-              <div
-                key={index}
-                className={`relative bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 ${
-                  index < 3 ? "ring-4 ring-opacity-20" : ""
-                }`}
-              >
-                {/* Top 3*/}
-                {index < 3 && (
-                  <div
-                    className={`absolute inset-0 opacity-10 bg-linear-to-r ${
-                      getRankStyle(index).split("text-")[0]
-                    }`}
-                  />
-                )}
+            filteredLeaderboard.map((entry) => {
+              const originalRank = leaderboard.findIndex(
+                (l) => l._id === entry._id
+              );
+              const isMe = user && entry.user?._id === user._id;
+              const rawName = entry.user?.username || "Anonymous";
 
-                <div className="relative flex items-center p-6 gap-6">
-                  {/* Rank */}
-                  <div className="shrink-0 text-center">
-                    <div
-                      className={`w-16 h-16 rounded-full flex items-center justify-center font-bold text-white shadow-xl bg-linear-to-br ${getRankStyle(
-                        index
-                      )}`}
-                    >
-                      {index < 3 ? (
-                        getRankIcon(index)
+              return (
+                <div
+                  key={entry._id}
+                  className={`flex items-center p-4 bg-white rounded-xl shadow-sm border border-gray-100 ${
+                    isMe ? "ring-2 ring-indigo-500" : ""
+                  }`}
+                >
+                  <div
+                    className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-md bg-gradient-to-br shrink-0 mr-4 ${getRankStyle(
+                      originalRank
+                    )}`}
+                  >
+                    {getRankIcon(originalRank)}
+                  </div>
+
+                  <div className="flex-1 flex items-center min-w-0 mr-4 gap-3">
+                    {/* Avatar */}
+                    <div className="shrink-0">
+                      {entry.user?.profilePicture ? (
+                        <img
+                          src={entry.user.profilePicture}
+                          alt={rawName}
+                          className="w-10 h-10 rounded-full object-cover border border-gray-100 shadow-sm"
+                        />
                       ) : (
-                        <span className="text-2xl">#{index + 1}</span>
+                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center border border-gray-50 shadow-sm">
+                          <User size={20} className="text-gray-400" />
+                        </div>
                       )}
                     </div>
-                  </div>
 
-                  {/* User Info */}
-                  <div className="flex-1 flex items-center gap-4">
-                    <div className="relative">
-                      <img
-                        src={
-                          entry.user?.profilePicture ||
-                          `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                            entry.user?.username || "User"
-                          )}&background=6366f1&color=fff&bold=true&length=2`
-                        }
-                        alt={`${entry.user?.username || "User"}'s avatar`}
-                        className="w-14 h-14 rounded-full object-cover ring-4 ring-white shadow-lg"
-                        onError={(e) => {
-                          e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                            entry.user?.username || "User"
-                          )}&background=6366f1&color=fff&bold=true&length=2`;
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <h3 className="font-bold text-lg text-gray-800">
-                        {entry.user?.username || "Anonymous User"}
-                      </h3>
-                      <p className="text-sm text-gray-500">Participant</p>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3
+                          className={`font-bold truncate ${
+                            isMe ? "text-indigo-600" : "text-gray-800"
+                          }`}
+                          title={rawName} // Tooltip shows full name
+                        >
+                          {truncateName(rawName)}
+                        </h3>
+                        {isMe && (
+                          <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">
+                            YOU
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-400 font-medium">
+                        {entry.timeTaken
+                          ? `${Math.round(entry.timeTaken)}s`
+                          : "0s"}
+                      </p>
                     </div>
                   </div>
 
-                  {/* Score */}
-                  <div className="text-right">
-                    <p className="text-3xl font-bold text-gray-800">
+                  <div className="text-right shrink-0">
+                    <span className="block text-xl font-bold text-gray-800">
                       {entry.totalScore}
-                    </p>
-                    <p className="text-sm text-gray-500 uppercase tracking-wide">
-                      points
-                    </p>
+                    </span>
+                    <span className="text-[10px] text-gray-400 font-bold uppercase">
+                      Points
+                    </span>
                   </div>
                 </div>
-
-                {/* Special glow for top 3 */}
-                {index < 3 && (
-                  <div
-                    className="absolute inset-x-0 bottom-0 h-1 bg-linear-to-r opacity-70"
-                    style={{
-                      backgroundImage: `linear-gradient(to right, transparent, ${
-                        getRankStyle(index).includes("yellow")
-                          ? "#fbbf24"
-                          : getRankStyle(index).includes("gray")
-                          ? "#9ca3af"
-                          : "#fb923c"
-                      }, transparent)`,
-                    }}
-                  />
-                )}
-              </div>
-            ))
+              );
+            })
           )}
         </div>
 
-        {/* Back Button */}
-        <div className="mt-12 text-center">
+        <div className="mt-10 text-center">
           <Link
             to="/created-quizzes"
-            className="inline-flex items-center gap-3 px-8 py-4 bg-linear-to-r from-gray-800 to-gray-900 text-white font-semibold rounded-2xl shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-xl font-bold hover:bg-black transition shadow-lg"
           >
-            <Home size={20} />
-            Back to Dashboard
+            <Home size={18} /> Back to Dashboard
           </Link>
         </div>
       </div>
