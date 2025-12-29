@@ -1,6 +1,14 @@
-const { Resend } = require("resend");
+const nodemailer = require("nodemailer");
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true, // true for port 465
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS, // The 16-digit App Password
+  },
+});
 
 const sendOTPEmail = async (email, otp, type = "verification") => {
   const subject =
@@ -11,31 +19,23 @@ const sendOTPEmail = async (email, otp, type = "verification") => {
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #4F46E5;">Quiz App</h2>
-      <p>Your ${
-        type === "verification" ? "verification" : "password reset"
-      } code is:</p>
-      <h1 style="color: #4F46E5; font-size: 32px; letter-spacing: 5px;">
-        ${otp}
-      </h1>
-      <p>This code will expire in 10 minutes.</p>
-      <p>If you didn’t request this, please ignore this email.</p>
-      <hr style="border:none;border-top:1px solid #e0e0e0;margin:20px 0;">
-      <p style="color:#666;font-size:12px;">
-        © ${new Date().getFullYear()} Quiz App
-      </p>
+      <p>Your code is:</p>
+      <h1 style="color: #4F46E5; font-size: 32px; letter-spacing: 5px;">${otp}</h1>
+      <p>This code expires in 10 minutes.</p>
     </div>
   `;
 
   try {
-    await resend.emails.send({
-      from: "Quiz App <onboarding@resend.dev>",
+    await transporter.sendMail({
+      from: `"Quiz App" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject,
-      html,
+      subject: subject,
+      html: html,
     });
+    console.log("Email sent successfully");
     return true;
   } catch (error) {
-    console.error("Resend email error:", error);
+    console.error("Error sending email:", error);
     return false;
   }
 };
