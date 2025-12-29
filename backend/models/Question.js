@@ -23,7 +23,7 @@ const questionSchema = new mongoose.Schema({
   options: [
     {
       text: String,
-      image: String, // Cloudinary URL for option image
+      image: String,
       isCorrect: Boolean,
     },
   ],
@@ -33,7 +33,6 @@ const questionSchema = new mongoose.Schema({
     default: 1,
     min: 1,
   },
-  // Removed timeLimit
   explanation: {
     type: String,
     default: "",

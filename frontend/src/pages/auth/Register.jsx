@@ -1,177 +1,131 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { useNavigate, Link } from "react-router-dom";
 import api, { endpoints } from "../../api/axios";
 import toast from "react-hot-toast";
-import { User, Mail, Lock, UserPlus, Loader2 } from "lucide-react";
+import { UserPlus, Loader2, ArrowLeft } from "lucide-react";
+import { useGoogleLogin } from "@react-oauth/google";
 
 export default function Register() {
+  const { setUser } = useAuth();
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    username: "",
-    email: "",
-    password: "",
-  });
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    try {
-      await api.post(endpoints.auth.register, formData);
-      toast.success("Registration successful! Please verify your email.");
-      navigate("/verify-otp", { state: { email: formData.email } });
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Registration failed");
-    } finally {
+  const googleSignup = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      try {
+        setIsLoading(true);
+        const userInfo = await fetch(
+          "https://www.googleapis.com/oauth2/v3/userinfo",
+          {
+            headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+          }
+        ).then((res) => res.json());
+
+        const { data } = await api.post(endpoints.auth.google, {
+          email: userInfo.email,
+          username: userInfo.name,
+          googleId: userInfo.sub,
+          profilePicture: userInfo.picture,
+        });
+
+        localStorage.setItem("token", data.token);
+        setUser(data.user);
+        toast.success("Account created successfully!");
+        navigate("/dashboard");
+      } catch (err) {
+        console.error("Registration failed:", err);
+        toast.error("Registration failed. Please try again.");
+        setIsLoading(false);
+      }
+    },
+    onError: () => {
+      toast.error("Google Signup Failed");
       setIsLoading(false);
-    }
-  };
+    },
+  });
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-xl p-8 md:p-10">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-14 h-14 bg-slate-900 rounded-2xl mb-4">
-              <UserPlus size={28} className="text-white" />
-            </div>
-            <h1 className="text-3xl font-Merriweather font-bold text-slate-900">
-              Create Account
-            </h1>
-            <p className="text-slate-600 mt-2">Join QuizMaster today</p>
+    <>
+      <style>{`
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(40px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter {
+          animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+      `}</style>
+
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center px-4 relative overflow-hidden">
+        {/* Background Ambience */}
+        <div className="absolute top-[-10%] right-[-5%] w-96 h-96 bg-purple-200/30 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-[-10%] left-[-5%] w-96 h-96 bg-blue-200/30 rounded-full blur-3xl animate-pulse delay-700" />
+
+        {/* Register Card */}
+        <div className="w-full max-w-md bg-white/80 backdrop-blur-xl border border-white/50 rounded-3xl shadow-2xl p-8 md:p-12 text-center relative z-10 animate-enter">
+          {/* Back Button */}
+          <Link
+            to="/"
+            className="absolute top-6 left-6 p-2 rounded-full hover:bg-slate-100/80 text-slate-400 hover:text-slate-600 transition-all"
+            title="Back to Home"
+          >
+            <ArrowLeft size={20} />
+          </Link>
+
+          {/* Logo Icon */}
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl mb-8 shadow-lg shadow-indigo-200 transform -rotate-3 hover:-rotate-6 transition-transform duration-300">
+            <UserPlus size={32} className="text-white" />
           </div>
 
-          {/* Form – same spacing and style as Login */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Username */}
-            <div>
-              <label
-                htmlFor="username"
-                className="block text-sm font-medium text-slate-700 mb-2"
-              >
-                Username
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <User size={20} className="text-slate-400" />
-                </div>
-                <input
-                  id="username"
-                  type="text"
-                  required
-                  disabled={isLoading}
-                  placeholder="Kgogoi"
-                  className="w-full pl-12 pr-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition disabled:opacity-70"
-                  value={formData.username}
-                  onChange={(e) =>
-                    setFormData({ ...formData, username: e.target.value })
-                  }
-                />
-              </div>
-            </div>
+          {/* Headings */}
+          <h1 className="text-4xl font-bold font-Merriweather text-slate-900 mb-3">
+            Create Account
+          </h1>
+          <p className="text-slate-600 mb-10 text-lg">
+            Join BudhiX and start quizzing today
+          </p>
 
-            {/* Email */}
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-slate-700 mb-2"
-              >
-                Email Address
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Mail size={20} className="text-slate-400" />
-                </div>
-                <input
-                  id="email"
-                  type="email"
-                  required
-                  disabled={isLoading}
-                  placeholder="you@example.com"
-                  className="w-full pl-12 pr-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition disabled:opacity-70"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                />
-              </div>
+          {/* Action Area */}
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center gap-3 py-6 bg-slate-50/50 rounded-2xl border border-slate-100">
+              <Loader2 className="animate-spin text-indigo-600" size={32} />
+              <span className="font-medium text-slate-600">
+                Creating your account...
+              </span>
             </div>
-
-            {/* Password */}
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-slate-700 mb-2"
+          ) : (
+            <div className="space-y-4">
+              <button
+                onClick={() => googleSignup()}
+                className="w-full flex items-center justify-center gap-3 bg-white border-2 border-slate-100 text-slate-700 font-bold py-4 rounded-xl hover:border-indigo-100 hover:bg-indigo-50/30 hover:shadow-lg transition-all duration-300 group transform hover:-translate-y-0.5"
               >
-                Password
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock size={20} className="text-slate-400" />
-                </div>
-                <input
-                  id="password"
-                  type="password"
-                  required
-                  disabled={isLoading}
-                  placeholder="••••••••"
-                  className="w-full pl-12 pr-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition disabled:opacity-70"
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
+                <img
+                  src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+                  alt="Google"
+                  className="w-6 h-6"
                 />
-              </div>
-            </div>
-
-            {/* Submit Button with Loading State */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-slate-900 text-white font-semibold py-3.5 rounded-xl hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 transition transform hover:-translate-y-0.5 shadow-lg disabled:opacity-80"
-            >
-              {isLoading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <Loader2 size={20} className="animate-spin" />
-                  Creating Account...
+                <span className="group-hover:text-indigo-900 transition-colors text-lg">
+                  Sign up with Google
                 </span>
-              ) : (
-                "Sign Up"
-              )}
-            </button>
-          </form>
+              </button>
+            </div>
+          )}
 
-          {/* Login Link – same as Login page */}
-          <div className="mt-8 text-center">
-            <p className="text-sm text-slate-600">
+          {/* Footer */}
+          <div className="mt-12 pt-6 border-t border-slate-100">
+            <p className="text-xs text-slate-400">
               Already have an account?{" "}
               <Link
                 to="/login"
-                className="font-semibold text-slate-900 hover:text-slate-700 transition"
+                className="font-bold text-indigo-600 hover:text-indigo-800 underline transition"
               >
-                Sign in
+                Log in here
               </Link>
             </p>
           </div>
-
-          {/* Back to Home */}
-          <div className="mt-6 text-center">
-            <Link
-              to="/"
-              className="text-sm text-slate-500 hover:text-slate-700 transition"
-            >
-              ← Back to home
-            </Link>
-          </div>
-        </div>
-
-        {/* Small footer */}
-        <div className="text-center mt-8">
-          <p className="text-xs text-slate-500">
-            © {new Date().getFullYear()} QuizMaster. All rights reserved.
-          </p>
         </div>
       </div>
-    </div>
+    </>
   );
 }

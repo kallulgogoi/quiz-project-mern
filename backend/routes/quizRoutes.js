@@ -16,17 +16,23 @@ router.delete("/:quizId", quizController.deleteQuiz);
 // User's quizzes
 router.get("/my-quizzes", quizController.getUserQuizzes);
 router.get("/:quizId", quizController.getQuizById);
+
 // Quiz participation
 router.post("/:quizId/start", quizController.startQuiz);
 router.post("/:quizId/submit", quizController.submitAnswers);
 
 // Leaderboard
 router.get("/:quizId/leaderboard", quizController.getLeaderboard);
-//attempts
 router.get("/:quizId/attempt", quizController.getMyAttempt);
 
 // Host controls
 router.post("/:quizId/start-live", quizController.startQuizLive);
 router.post("/:quizId/end-live", quizController.endQuizLive);
+
+// 🟢 NEW: Host Reports
+// Get list of all attempts for a quiz
+router.get("/:quizId/all-attempts", quizController.getQuizAttempts);
+// Get details of a specific participant's attempt
+router.get("/attempt-details/:attemptId", quizController.getAttemptDetailsById);
 
 module.exports = router;

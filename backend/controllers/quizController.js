@@ -150,7 +150,12 @@ exports.joinQuiz = async (req, res) => {
       });
     }
 
-    if (quiz.status === "completed") {
+    // 🟢 FIX: Check if Time has passed OR Status is completed
+    const now = new Date();
+    if (
+      quiz.status === "completed" ||
+      (quiz.endTime && now > new Date(quiz.endTime))
+    ) {
       return res.status(400).json({
         success: false,
         message: "This quiz has ended",
@@ -301,7 +306,7 @@ exports.deleteQuiz = async (req, res) => {
   }
 };
 
-// Get User's Quizzes (UPDATED for Dashboard)
+// Get User's Quizzes
 exports.getUserQuizzes = async (req, res) => {
   try {
     const { type } = req.query;
@@ -309,6 +314,16 @@ exports.getUserQuizzes = async (req, res) => {
     let quizzes;
 
     if (type === "created") {
+      const now = new Date();
+      await Quiz.updateMany(
+        {
+          host: req.user._id,
+          status: "active",
+          endTime: { $lt: now },
+        },
+        { $set: { status: "completed" } }
+      );
+
       quizzes = await Quiz.find({ host: req.user._id })
         .sort({ createdAt: -1 })
         .populate("participants", "username profilePicture");
@@ -332,8 +347,6 @@ exports.getUserQuizzes = async (req, res) => {
             score: p.totalScore || 0,
             rank: p.rank || "-",
             completed: p.completed,
-            // --- FIX IS HERE ---
-            // Prioritize finished time, then start time, then creation time
             dateTaken: p.finishedAt || p.startedAt || p.createdAt || new Date(),
           };
         })
@@ -400,7 +413,6 @@ exports.startQuiz = async (req, res) => {
         });
       }
 
-      // Race condition Fix
       const lastStarted = existingAttempt.startedAt
         ? new Date(existingAttempt.startedAt).getTime()
         : 0;
@@ -421,7 +433,6 @@ exports.startQuiz = async (req, res) => {
           attemptCount: 1,
         });
       } catch (error) {
-        // Handle race condition (Duplicate key)
         if (error.code !== 11000) {
           throw error;
         }
@@ -763,8 +774,6 @@ exports.getQuizById = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Quiz not found" });
     }
-
-    // CHECK: HOST OR PARTICIPANT
     const isHost = quiz.host.toString() === req.user._id.toString();
     const isParticipant = quiz.participants.some(
       (p) => p._id.toString() === req.user._id.toString()
@@ -782,22 +791,22 @@ exports.getQuizById = async (req, res) => {
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
-
-//
 exports.getMyAttempt = async (req, res) => {
   try {
     const { quizId } = req.params;
-
-    // Find the participant record for this user and quiz
     const participant = await Participant.findOne({
       quiz: quizId,
       user: req.user._id,
     })
-      .populate("quiz", "title description duration startTime") // Get basic quiz info
       .populate({
-        path: "answers.question", // Populate the question details inside the answers array
-        model: "Question",
-      });
+        path: "quiz",
+        select: "title description duration startTime questions", // Include questions here
+        populate: {
+          path: "questions",
+          model: "Question", // Fully expand the question details
+        },
+      })
+      .populate("answers.question"); // Keep this to match user answers
 
     if (!participant) {
       return res.status(404).json({
@@ -816,5 +825,49 @@ exports.getMyAttempt = async (req, res) => {
       success: false,
       message: "Failed to fetch attempt details",
     });
+  }
+};
+
+exports.getQuizAttempts = async (req, res) => {
+  try {
+    const { quizId } = req.params;
+    const quiz = await Quiz.findById(quizId);
+
+    if (!quiz) return res.status(404).json({ message: "Quiz not found" });
+    if (quiz.host.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    const attempts = await Participant.find({ quiz: quizId })
+      .populate("user", "username email profilePicture")
+      .sort({ totalScore: -1 });
+
+    res.json({ success: true, attempts });
+  } catch (error) {
+    console.error("Get attempts error:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+exports.getAttemptDetailsById = async (req, res) => {
+  try {
+    const { attemptId } = req.params;
+
+    const attempt = await Participant.findById(attemptId)
+      .populate("user", "username email profilePicture")
+      .populate({
+        path: "quiz",
+        select: "title host questions",
+        populate: { path: "questions" },
+      })
+      .populate("answers.question");
+    if (!attempt) return res.status(404).json({ message: "Attempt not found" });
+    if (attempt.quiz.host.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    res.json({ success: true, attempt });
+  } catch (error) {
+    console.error("Get attempt details error:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
   }
 };

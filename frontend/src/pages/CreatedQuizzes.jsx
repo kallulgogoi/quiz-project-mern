@@ -352,6 +352,15 @@ export default function CreatedQuizzes() {
                       <Edit size={18} />
                     </button>
 
+                    {/* 🟢 NEW: Report Button */}
+                    <button
+                      onClick={() => navigate(`/host/reports/${quiz._id}`)}
+                      className="p-2.5 text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-xl hover:bg-indigo-100 transition"
+                      title="View Student Reports"
+                    >
+                      <Users size={18} />
+                    </button>
+
                     {quiz.status === "scheduled" ? (
                       <button
                         onClick={() => navigate(`/host/live/${quiz._id}`)}

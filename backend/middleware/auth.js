@@ -15,20 +15,6 @@ const auth = async (req, res, next) => {
     if (!user) {
       throw new Error();
     }
-
-    // Check if user is verified (except for some routes)
-    if (
-      !user.isVerified &&
-      req.path !== "/verify-otp" &&
-      req.path !== "/resend-otp"
-    ) {
-      return res.status(401).json({
-        success: false,
-        message: "Please verify your email first",
-        code: "EMAIL_NOT_VERIFIED",
-      });
-    }
-
     req.user = user;
     req.token = token;
     next();
@@ -43,7 +29,7 @@ const auth = async (req, res, next) => {
 const isHost = async (req, res, next) => {
   try {
     const quizId = req.params.quizId || req.body.quizId;
-    const quiz = await Quiz.findById(quizId);
+    const quiz = await require("../models/Quiz").findById(quizId);
 
     if (!quiz) {
       return res.status(404).json({
@@ -62,6 +48,7 @@ const isHost = async (req, res, next) => {
     req.quiz = quiz;
     next();
   } catch (error) {
+    console.error("isHost Middleware Error:", error);
     res.status(500).json({
       success: false,
       message: "Server error",

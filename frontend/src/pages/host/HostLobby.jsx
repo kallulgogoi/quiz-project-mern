@@ -42,6 +42,17 @@ export default function HostLobby() {
     }
   }, [quizId, socket]);
 
+  // Actions defined earlier so they can be used in useEffect
+  const endQuiz = async () => {
+    try {
+      await api.post(endpoints.quiz.endLive(quizId));
+      toast.success("Quiz Ended");
+      fetchQuiz();
+    } catch (err) {
+      toast.error("Failed to end");
+    }
+  };
+
   useEffect(() => {
     if (!quiz) return;
     if (quiz.status !== "scheduled" && quiz.status !== "active") return;
@@ -64,8 +75,14 @@ export default function HostLobby() {
           setIsReadyToStart(true);
         } else if (quiz.status === "active") {
           clearInterval(timer);
-          setQuiz((prev) => ({ ...prev, status: "completed" }));
-          toast.success("Time's up! Quiz completed.");
+          // 🟢 FIX: Call backend to properly end the quiz
+          api
+            .post(endpoints.quiz.endLive(quizId))
+            .then(() => {
+              setQuiz((prev) => ({ ...prev, status: "completed" }));
+              toast.success("Time's up! Quiz completed.");
+            })
+            .catch(() => toast.error("Failed to auto-end quiz"));
         }
       } else {
         setTimeLeft(diff);
@@ -85,7 +102,6 @@ export default function HostLobby() {
     return `${h}h ${m}m ${s}s`;
   };
 
-  // Actions
   const startQuiz = async () => {
     try {
       await api.post(endpoints.quiz.startLive(quizId));
@@ -93,16 +109,6 @@ export default function HostLobby() {
       fetchQuiz();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to start");
-    }
-  };
-
-  const endQuiz = async () => {
-    try {
-      await api.post(endpoints.quiz.endLive(quizId));
-      toast.success("Quiz Ended");
-      fetchQuiz();
-    } catch (err) {
-      toast.error("Failed to end");
     }
   };
 

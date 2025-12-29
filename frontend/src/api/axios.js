@@ -6,18 +6,17 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 });
 
 export const endpoints = {
   auth: {
-    login: "/auth/login",
-    register: "/auth/register",
-    verify: "/auth/verify-otp",
+    google: "/auth/google",
     me: "/auth/me",
     updateProfile: "/auth/profile",
-    changePassword: "/auth/change-password",
   },
   quiz: {
     create: "/quizzes",
@@ -33,9 +32,18 @@ export const endpoints = {
     startLive: (id) => `/quizzes/${id}/start-live`,
     endLive: (id) => `/quizzes/${id}/end-live`,
     attempt: (id) => `/quizzes/${id}/attempt`,
+    allAttempts: (quizId) => `/quizzes/${quizId}/all-attempts`,
+    attemptDetails: (attemptId) => `/quizzes/attempt-details/${attemptId}`,
+  },
+  questions: {
+    add: (quizId) => `/questions/add/${quizId}`,
+    update: (id) => `/questions/${id}`,
+    delete: (id) => `/questions/${id}`,
+    getById: (id) => `/questions/${id}`,
   },
   ai: {
     generate: "/ai/generate-questions",
+    generateFromText: "/ai/generate-from-text",
     save: (id) => `/ai/save-questions/${id}`,
   },
 };
