@@ -3,11 +3,17 @@ const nodemailer = require("nodemailer");
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 465,
-  secure: true, // true for port 465
+  secure: true,
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // The 16-digit App Password
+    pass: process.env.EMAIL_PASS,
   },
+  tls: {
+    rejectUnauthorized: false,
+  },
+  // Enable detailed logs
+  logger: true,
+  debug: true,
 });
 
 const sendOTPEmail = async (email, otp, type = "verification") => {
@@ -26,16 +32,22 @@ const sendOTPEmail = async (email, otp, type = "verification") => {
   `;
 
   try {
-    await transporter.sendMail({
+    console.log(`Attempting to send email to ${email}...`);
+
+    await transporter.verify(); // Test connection before sending
+    console.log("Transporter connection verified.");
+
+    const info = await transporter.sendMail({
       from: `"Quiz App" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: subject,
       html: html,
     });
-    console.log("Email sent successfully");
+
+    console.log("Email sent successfully: ", info.messageId);
     return true;
   } catch (error) {
-    console.error("Error sending email:", error);
+    console.error("CRITICAL EMAIL ERROR:", error);
     return false;
   }
 };
