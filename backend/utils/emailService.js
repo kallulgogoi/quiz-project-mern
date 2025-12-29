@@ -1,19 +1,13 @@
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
+  host: "smtp-relay.brevo.com",
+  port: 2525,
+  secure: false,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  tls: {
-    rejectUnauthorized: false,
-  },
-  // Enable detailed logs
-  logger: true,
-  debug: true,
 });
 
 const sendOTPEmail = async (email, otp, type = "verification") => {
@@ -32,22 +26,19 @@ const sendOTPEmail = async (email, otp, type = "verification") => {
   `;
 
   try {
-    console.log(`Attempting to send email to ${email}...`);
+    console.log(`Sending email to ${email}...`);
 
-    await transporter.verify(); // Test connection before sending
-    console.log("Transporter connection verified.");
-
-    const info = await transporter.sendMail({
-      from: `"Quiz App" <${process.env.EMAIL_USER}>`,
+    await transporter.sendMail({
+      from: `"Quiz App" <quizapp109@gmail.com>`,
       to: email,
       subject: subject,
       html: html,
     });
 
-    console.log("Email sent successfully: ", info.messageId);
+    console.log("Email sent successfully!");
     return true;
   } catch (error) {
-    console.error("CRITICAL EMAIL ERROR:", error);
+    console.error("Error sending email:", error);
     return false;
   }
 };
