@@ -65,6 +65,12 @@ export default function Dashboard() {
     fetchAllStats();
   }, []);
 
+  // Helper to truncate name
+  const truncateName = (name) => {
+    if (!name) return "";
+    return name.length > 8 ? name.substring(0, 8) + ".." : name;
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 relative overflow-hidden">
       <div className="absolute inset-0 -z-10">
@@ -80,7 +86,9 @@ export default function Dashboard() {
             <div>
               <h1 className="text-3xl md:text-4xl font-bold font-Merriweather text-slate-900">
                 Welcome back,{" "}
-                <span className="text-indigo-600">{user?.username}</span>
+                <span className="text-indigo-600" title={user?.username}>
+                  {truncateName(user?.username)}
+                </span>
               </h1>
               <p className="text-lg text-slate-600 mt-3">
                 Here's a quick overview of your quiz activity.

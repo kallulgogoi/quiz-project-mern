@@ -6,6 +6,7 @@ import { SocketProvider } from "./context/SocketContext";
 import { Toaster } from "react-hot-toast";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
+import ScrollToTop from "./components/ScrollToTop";
 
 // Landing Page
 import LandingPage from "./pages/LandingPage";
@@ -36,6 +37,7 @@ const PublicRoute = ({ children }) => {
 function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <AuthProvider>
         <SocketProvider>
           <Toaster position="top-center" />
