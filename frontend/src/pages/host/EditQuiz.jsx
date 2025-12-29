@@ -21,7 +21,6 @@ export default function EditQuiz() {
     title: "",
     description: "",
     startTime: "",
-    // endTime removed
     duration: 30,
     settings: {
       showLeaderboard: true,
@@ -38,9 +37,13 @@ export default function EditQuiz() {
         const quiz = data.quiz;
 
         // Format dates for datetime-local input (YYYY-MM-DDThh:mm)
+        // Kept logic as is for functionality
         const formatDateForInput = (dateString) => {
           if (!dateString) return "";
-          return new Date(dateString).toISOString().slice(0, 16);
+          const date = new Date(dateString);
+          const offsetMs = date.getTimezoneOffset() * 60 * 1000;
+          const localDate = new Date(date.getTime() - offsetMs);
+          return localDate.toISOString().slice(0, 16);
         };
 
         setFormData({
@@ -57,7 +60,7 @@ export default function EditQuiz() {
         });
       } catch (err) {
         toast.error("Failed to load quiz data");
-        navigate("/"); // Redirect on error
+        navigate("/");
       } finally {
         setLoading(false);
       }
@@ -84,7 +87,7 @@ export default function EditQuiz() {
     try {
       await api.put(endpoints.quiz.update(quizId), formData);
       toast.success("Quiz updated successfully!");
-      navigate("/created-quizzes");
+      navigate("/");
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to update quiz");
     } finally {
@@ -103,10 +106,10 @@ export default function EditQuiz() {
   return (
     <div className="max-w-3xl mx-auto p-4 md:p-6 min-h-screen bg-gray-50/50">
       <button
-        onClick={() => navigate("/created-quizzes")}
+        onClick={() => navigate("/")}
         className="flex items-center text-gray-500 hover:text-gray-800 mb-6 transition"
       >
-        <ArrowLeft size={20} className="mr-2" /> Back to quizzes
+        <ArrowLeft size={20} className="mr-2" /> Back to Dashboard
       </button>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -207,7 +210,7 @@ export default function EditQuiz() {
                   name="settings.showLeaderboard"
                   checked={formData.settings.showLeaderboard}
                   onChange={handleChange}
-                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 shrink-0"
+                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 flex-shrink-0"
                 />
                 <div>
                   <span className="block font-medium text-gray-700">
@@ -225,7 +228,7 @@ export default function EditQuiz() {
                   name="settings.shuffleQuestions"
                   checked={formData.settings.shuffleQuestions}
                   onChange={handleChange}
-                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 shrink-0"
+                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 flex-shrink-0"
                 />
                 <div>
                   <span className="block font-medium text-gray-700">
@@ -243,7 +246,7 @@ export default function EditQuiz() {
                   name="settings.allowMultipleAttempts"
                   checked={formData.settings.allowMultipleAttempts}
                   onChange={handleChange}
-                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 shrink-0"
+                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 flex-shrink-0"
                 />
                 <div>
                   <span className="block font-medium text-gray-700">
