@@ -22,19 +22,20 @@ export default function TakeQuiz() {
   const [quizMeta, setQuizMeta] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
+
+  const [endTime, setEndTime] = useState(null);
   const [timeLeft, setTimeLeft] = useState(null);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
+
   useEffect(() => {
     const startQuiz = async () => {
       try {
         const { data } = await api.post(endpoints.quiz.start(quizId));
         setQuestions(data.questions);
         setQuizMeta(data.quiz);
-        const endTime = new Date(data.quiz.endTime);
-        const now = new Date();
-        const diff = differenceInSeconds(endTime, now);
-        setTimeLeft(diff > 0 ? diff : 0);
+        setEndTime(new Date(data.quiz.endTime));
       } catch (err) {
         toast.error(err.response?.data?.message || "Error starting quiz");
         navigate("/dashboard");
@@ -42,20 +43,26 @@ export default function TakeQuiz() {
     };
     startQuiz();
   }, [quizId, navigate]);
+
   const submitQuiz = useCallback(
     async (autoSubmit = false) => {
       if (isSubmittingRef.current) return;
       isSubmittingRef.current = true;
       setIsSubmitting(true);
+
       const formattedAnswers = Object.entries(answers).map(([qId, val]) => ({
         questionId: qId,
         answer: val,
       }));
+
       let loadingToast;
       if (!autoSubmit) {
         loadingToast = toast.loading("Submitting quiz...");
       } else {
-        toast("Time's up! Submitting...", { icon: "⏳" });
+        toast("Time's up! Submitting answers...", {
+          icon: "⏳",
+          duration: 4000,
+        });
       }
 
       try {
@@ -69,36 +76,48 @@ export default function TakeQuiz() {
         console.error(err);
         if (loadingToast)
           toast.error("Submission failed", { id: loadingToast });
+
         if (!autoSubmit) {
           isSubmittingRef.current = false;
           setIsSubmitting(false);
+        } else {
+          navigate(`/result/${quizId}`);
         }
       }
     },
     [answers, quizId, navigate]
   );
+
   useEffect(() => {
-    if (timeLeft === null) return;
-    if (timeLeft <= 0) {
-      setTimeout(() => {
-        submitQuiz(true);
-      }, 0);
-      return;
-    }
+    if (!endTime) return;
+
+    const calculateTime = () => {
+      const now = new Date();
+      const diff = differenceInSeconds(endTime, now);
+
+      if (diff <= 0) {
+        setTimeLeft(0);
+        if (!isSubmittingRef.current) {
+          submitQuiz(true);
+        }
+        return false;
+      } else {
+        setTimeLeft(diff);
+        return true;
+      }
+    };
+
+    const shouldContinue = calculateTime();
+    if (!shouldContinue) return;
 
     const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          submitQuiz(true);
-          return 0;
-        }
-        return prev - 1;
-      });
+      const keepGoing = calculateTime();
+      if (!keepGoing) clearInterval(timer);
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft, submitQuiz]);
+  }, [endTime, submitQuiz]);
+
   const handleAnswer = (val, type) => {
     if (isSubmitting) return;
 
@@ -123,6 +142,7 @@ export default function TakeQuiz() {
       }));
     }
   };
+
   if (!questions.length || timeLeft === null) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
@@ -140,7 +160,9 @@ export default function TakeQuiz() {
   const currentQ = questions[currentIndex];
   const currentAnswer = answers[currentQ._id];
   const progressPercentage = ((currentIndex + 1) / questions.length) * 100;
+
   const formatTime = (seconds) => {
+    if (seconds <= 0) return "00:00";
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}:${String(s).padStart(2, "0")}`;
@@ -150,7 +172,6 @@ export default function TakeQuiz() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Top Bar */}
       <div className="bg-white border-b sticky top-0 z-10 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <div>
@@ -173,7 +194,6 @@ export default function TakeQuiz() {
             {formatTime(timeLeft)}
           </div>
         </div>
-        {/* Progress Bar */}
         <div className="h-1 bg-gray-100 w-full">
           <div
             className="h-full bg-indigo-600 transition-all duration-300"
@@ -182,10 +202,8 @@ export default function TakeQuiz() {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col items-center p-4 md:p-8 max-w-4xl mx-auto w-full">
         <div className="w-full bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          {/* Question Header */}
           <div className="p-6 md:p-8 border-b border-gray-100">
             <div className="flex items-center gap-3 mb-4">
               <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">
@@ -200,9 +218,7 @@ export default function TakeQuiz() {
             </h2>
           </div>
 
-          {/* Answer Area */}
           <div className="p-6 md:p-8 bg-gray-50/50">
-            {/* MCQ / Options */}
             {(currentQ.questionType === "mcq" ||
               currentQ.questionType === "multiple-correct") && (
               <div className="grid gap-3">
@@ -236,7 +252,6 @@ export default function TakeQuiz() {
               </div>
             )}
 
-            {/* Fill in Blank / Descriptive */}
             {(currentQ.questionType === "fill-blank" ||
               currentQ.questionType === "descriptive") && (
               <div className="space-y-2">
@@ -256,7 +271,6 @@ export default function TakeQuiz() {
           </div>
         </div>
 
-        {/* Navigation Buttons */}
         <div className="flex justify-between w-full mt-6">
           <button
             onClick={() => setCurrentIndex((prev) => prev - 1)}
