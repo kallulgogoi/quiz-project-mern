@@ -458,6 +458,7 @@ exports.startQuiz = async (req, res) => {
       },
       questions,
       settings: quiz.settings,
+      serverTime: new Date().toISOString(), // 🟢 NEW: Send Server Time for Sync
     });
   } catch (error) {
     console.error("Start quiz error:", error);

@@ -25,6 +25,7 @@ export default function TakeQuiz() {
 
   const [endTime, setEndTime] = useState(null);
   const [timeLeft, setTimeLeft] = useState(null);
+  const [timeOffset, setTimeOffset] = useState(0);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
@@ -36,6 +37,12 @@ export default function TakeQuiz() {
         setQuestions(data.questions);
         setQuizMeta(data.quiz);
         setEndTime(new Date(data.quiz.endTime));
+
+        if (data.serverTime) {
+          const serverTime = new Date(data.serverTime).getTime();
+          const clientTime = Date.now();
+          setTimeOffset(serverTime - clientTime);
+        }
       } catch (err) {
         toast.error(err.response?.data?.message || "Error starting quiz");
         navigate("/dashboard");
@@ -92,7 +99,7 @@ export default function TakeQuiz() {
     if (!endTime) return;
 
     const calculateTime = () => {
-      const now = new Date();
+      const now = new Date(Date.now() + timeOffset);
       const diff = differenceInSeconds(endTime, now);
 
       if (diff <= 0) {
@@ -116,7 +123,7 @@ export default function TakeQuiz() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [endTime, submitQuiz]);
+  }, [endTime, submitQuiz, timeOffset]);
 
   const handleAnswer = (val, type) => {
     if (isSubmitting) return;
