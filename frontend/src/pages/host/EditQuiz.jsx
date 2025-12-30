@@ -35,12 +35,14 @@ export default function EditQuiz() {
       try {
         const { data } = await api.get(endpoints.quiz.getById(quizId));
         const quiz = data.quiz;
+
+        // 🟢 FIX 1: Display Time Correctly (Convert UTC to Local Input Format)
         const formatDateForInput = (dateString) => {
           if (!dateString) return "";
           const date = new Date(dateString);
 
+          // Manually build local string to avoid UTC conversion
           const pad = (num) => String(num).padStart(2, "0");
-
           const year = date.getFullYear();
           const month = pad(date.getMonth() + 1);
           const day = pad(date.getDate());
@@ -89,6 +91,8 @@ export default function EditQuiz() {
     e.preventDefault();
     setSaving(true);
     try {
+      // 🟢 FIX 2: Save Time Correctly (Convert Local Input to UTC)
+      // This prevents the 5.5 hour shift when saving updates
       const payload = {
         ...formData,
         startTime: new Date(formData.startTime).toISOString(),
