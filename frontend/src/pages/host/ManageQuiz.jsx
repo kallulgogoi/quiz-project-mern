@@ -17,8 +17,11 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
+  Download,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function ManageQuiz() {
   const { quizId } = useParams();
@@ -54,6 +57,55 @@ export default function ManageQuiz() {
   useEffect(() => {
     fetchQuestions();
   }, [quizId]);
+  const handleDownloadQuestions = () => {
+    if (questions.length === 0) return toast.error("No questions to download");
+    const doc = new jsPDF();
+    //Header
+    const addHeader = () => {
+      doc.setFontSize(22);
+      doc.setTextColor(79, 70, 229); // Indigo
+      doc.text("BudhiX", 14, 15);
+      doc.setFontSize(12);
+      doc.setTextColor(100);
+      doc.text("Smart Quiz Platform", 14, 22);
+
+      doc.setDrawColor(79, 70, 229);
+      doc.line(14, 25, 196, 25);
+    };
+
+    addHeader();
+    //Title
+    doc.setFontSize(16);
+    doc.setTextColor(0);
+    doc.text("Quiz Questions", 14, 35);
+    doc.setFontSize(11);
+    doc.text(`Total Questions: ${questions.length}`, 14, 42);
+    const tableData = questions.map((q, index) => [
+      index + 1,
+      q.questionText,
+      q.questionType.toUpperCase(),
+      q.options.map((o) => o.text).join(", "),
+      q.options
+        .filter((o) => o.isCorrect)
+        .map((o) => o.text)
+        .join(", ") ||
+        q.correctAnswers?.join(", ") ||
+        "N/A",
+    ]);
+    autoTable(doc, {
+      startY: 50,
+      head: [["#", "Question", "Type", "Options", "Answer"]],
+      body: tableData,
+      theme: "grid",
+      headStyles: { fillColor: [79, 70, 229] },
+      //Repeat header on every page
+      didDrawPage: () => {
+        addHeader();
+      },
+    });
+
+    doc.save("BudhiX_Quiz_Questions.pdf");
+  };
 
   const toggleType = (type) => {
     if (selectedTypes.includes(type) && selectedTypes.length === 1) {
@@ -157,7 +209,7 @@ export default function ManageQuiz() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => navigate("/created-quizzes")}
@@ -175,22 +227,33 @@ export default function ManageQuiz() {
               </div>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex flex-wrap mt-4 gap-2 md:gap-3">
+              <button
+                onClick={handleDownloadQuestions}
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-3 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition shadow-sm text-sm"
+              >
+                <Download size={18} />
+                <span>PDF</span>
+              </button>
+
               <button
                 onClick={() => setShowAiGen(!showAiGen)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition ${
+                className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl font-medium transition text-sm ${
                   showAiGen
                     ? "bg-purple-100 text-purple-700 border border-purple-300"
                     : "bg-gray-100 text-gray-700 hover:bg-purple-50 hover:text-purple-700"
                 }`}
               >
                 <Sparkles size={18} />
-                {showAiGen ? "Close AI" : "AI Generate"}
+                <span className="whitespace-nowrap">
+                  {showAiGen ? "Close" : "AI Generate"}
+                </span>
               </button>
+
               <button
                 onClick={() => setEditingId("new")}
                 disabled={!!editingId}
-                className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm whitespace-nowrap"
               >
                 <Plus size={18} strokeWidth={2.5} />
                 Add New
@@ -414,7 +477,7 @@ export default function ManageQuiz() {
                                   : "bg-gray-50 border-transparent hover:border-gray-300"
                               }`}
                             >
-                              <div className="flex-shrink-0">
+                              <div className="shrink-0">
                                 {opt.isCorrect ? (
                                   <div className="w-7 h-7 rounded-full bg-green-500 flex items-center justify-center">
                                     <Check
@@ -451,7 +514,7 @@ export default function ManageQuiz() {
         {/* Finish Section */}
         {questions.length > 0 && !editingId && (
           <>
-            <div className="mt-12 p-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl text-white shadow-xl">
+            <div className="mt-12 p-8 bg-linear-to-r from-green-500 to-emerald-600 rounded-2xl text-white shadow-xl">
               <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="text-center md:text-left">
                   <div className="flex items-center gap-3 mb-3 justify-center md:justify-start">

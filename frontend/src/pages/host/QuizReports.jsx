@@ -5,12 +5,11 @@ import {
   ArrowLeft,
   Search,
   User,
-  Clock,
   ChevronRight,
-  Download,
-  Award,
+  Download, // Import Download icon
 } from "lucide-react";
 import { TrophySpin } from "react-loading-indicators";
+import * as XLSX from "xlsx"; // 🟢 IMPORT XLSX
 
 export default function QuizReports() {
   const { quizId } = useParams();
@@ -32,6 +31,28 @@ export default function QuizReports() {
     };
     fetchAttempts();
   }, [quizId]);
+
+  // 🟢 NEW: Handle Excel Download
+  const handleDownloadExcel = () => {
+    if (attempts.length === 0) return;
+
+    // 1. Format Data for Excel
+    const dataToExport = attempts.map((attempt) => ({
+      "Participant Name": attempt.user.username,
+      "Email": attempt.user.email,
+      "Score": attempt.totalScore,
+      "Time Taken (sec)": attempt.timeTaken,
+      "Date": new Date(attempt.finishedAt).toLocaleDateString(),
+    }));
+
+    // 2. Create Sheet
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Quiz Results");
+
+    // 3. Download File
+    XLSX.writeFile(workbook, `Quiz_Report_${quizId}.xlsx`);
+  };
 
   const filteredAttempts = attempts.filter((a) =>
     a.user.username.toLowerCase().includes(search.toLowerCase())
@@ -65,18 +86,29 @@ export default function QuizReports() {
               </p>
             </div>
           </div>
-          <div className="relative w-full md:w-64">
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-              size={18}
-            />
-            <input
-              type="text"
-              placeholder="Search student..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
-            />
+
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            {/* 🟢 NEW: Download Button */}
+            <button
+              onClick={handleDownloadExcel}
+              className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition shadow-sm whitespace-nowrap"
+            >
+              <Download size={18} /> Export CSV
+            </button>
+
+            <div className="relative w-full md:w-64">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                size={18}
+              />
+              <input
+                type="text"
+                placeholder="Search student..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
           </div>
         </div>
 

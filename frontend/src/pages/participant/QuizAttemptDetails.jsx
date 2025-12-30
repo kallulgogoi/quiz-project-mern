@@ -10,14 +10,16 @@ import {
   Calendar,
   Award,
   AlertCircle,
-  Timer,
   Download,
-  Loader2,
   ArrowUp,
+  FileText,
+  HelpCircle,
 } from "lucide-react";
 import { format, differenceInMinutes } from "date-fns";
 import toast from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable"; // 🟢 FIXED IMPORT
 
 export default function QuizAttemptDetails() {
   const { quizId } = useParams();
@@ -25,7 +27,7 @@ export default function QuizAttemptDetails() {
   const { user } = useAuth();
   const [attempt, setAttempt] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showScrollTop, setShowScrollTop] = useState(false); // State for scroll button
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -45,19 +47,100 @@ export default function QuizAttemptDetails() {
 
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 300) {
-        setShowScrollTop(true);
-      } else {
-        setShowScrollTop(false);
-      }
+      setShowScrollTop(window.scrollY > 300);
     };
-
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const fullReport =
+    attempt?.quiz?.questions?.map((question) => {
+      const userAnswer = attempt.answers.find(
+        (a) => a.question && a.question._id === question._id
+      );
+      return {
+        question,
+        userAnswer: userAnswer || null,
+      };
+    }) || [];
+  const handleDownloadReport = () => {
+    if (!attempt) return;
+
+    const doc = new jsPDF();
+    const { quiz, totalScore, timeTaken } = attempt;
+
+    // Header
+    doc.setFontSize(20);
+    doc.text("Quiz Result Report", 14, 22);
+
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Participant: ${user.username} (${user.email})`, 14, 32);
+    doc.text(`Quiz: ${quiz.title}`, 14, 38);
+    doc.text(`Score: ${totalScore}`, 14, 44);
+    doc.text(`Date: ${new Date().toLocaleDateString("en-IN")}`, 14, 50);
+
+    // Prepare Data for Table
+    const tableData = fullReport.map((item, index) => {
+      const { question, userAnswer } = item;
+      let status = "Skipped";
+      let answerText = "-";
+
+      if (userAnswer) {
+        status = userAnswer.isCorrect ? "Correct" : "Incorrect";
+        answerText = Array.isArray(userAnswer.answer)
+          ? userAnswer.answer.join(", ")
+          : userAnswer.answer;
+      }
+
+      const correctAnswer =
+        question.questionType === "fill-blank" ||
+        question.questionType === "descriptive"
+          ? question.correctAnswers?.join(", ")
+          : question.options
+              .filter((o) => o.isCorrect)
+              .map((o) => o.text)
+              .join(", ");
+
+      return [
+        index + 1,
+        question.questionText,
+        answerText,
+        correctAnswer,
+        status,
+      ];
+    });
+    autoTable(doc, {
+      startY: 60,
+      head: [["#", "Question", "Your Answer", "Correct Answer", "Status"]],
+      body: tableData,
+      theme: "grid",
+      headStyles: {
+        fillColor: [79, 70, 229],
+        halign: "center",
+      },
+      columnStyles: {
+        0: { cellWidth: 10 },
+        4: { cellWidth: 25, fontStyle: "bold" },
+      },
+      didParseCell: function (data) {
+        if (data.section === "body" && data.column.index === 4) {
+          if (data.cell.raw === "Correct")
+            data.cell.styles.textColor = [0, 128, 0];
+          if (data.cell.raw === "Incorrect")
+            data.cell.styles.textColor = [220, 38, 38];
+          if (data.cell.raw === "Skipped")
+            data.cell.styles.textColor = [128, 128, 128];
+        }
+      },
+    });
+
+    doc.save(`Report_${quiz.title.replace(/\s+/g, "_")}.pdf`);
+    toast.success("Report downloaded");
   };
 
   const handleDownloadCertificate = () => {
@@ -109,12 +192,7 @@ export default function QuizAttemptDetails() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <TrophySpin
-          color="#23eeff"
-          size="medium"
-          text="loading"
-          textColor="#0ae6f9"
-        />
+        <TrophySpin color="#23eeff" size="medium" text="" textColor="#0ae6f9" />
       </div>
     );
   }
@@ -156,8 +234,7 @@ export default function QuizAttemptDetails() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 relative">
-      {/* Header*/}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
+      <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
@@ -176,22 +253,37 @@ export default function QuizAttemptDetails() {
               </p>
             </div>
           </div>
+
+          <button
+            onClick={handleDownloadReport}
+            className="hidden md:flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-xl font-bold hover:bg-black transition shadow-lg text-sm"
+          >
+            <FileText size={16} /> Report PDF
+          </button>
         </div>
       </div>
 
       <div className="max-w-5xl mx-auto px-6 pt-8">
-        {/* Certificate Section */}
+        <div className="md:hidden mb-6">
+          <button
+            onClick={handleDownloadReport}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 text-white rounded-xl font-bold shadow-lg"
+          >
+            <FileText size={18} /> Download Result PDF
+          </button>
+        </div>
+
         {attempt.quiz?.certificateTemplate && (
-          <div className="mb-8 bg-gray-900 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl text-white">
+          <div className="mb-8 bg-linear-to-r from-gray-900 to-gray-800 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl text-white">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-gray-800 rounded-full border border-gray-700">
+              <div className="p-3 bg-gray-700/50 rounded-full border border-gray-600">
                 <Award size={32} className="text-yellow-400" />
               </div>
               <div className="text-left">
                 <h3 className="text-lg font-bold text-white">
                   Certificate Available
                 </h3>
-                <p className="text-gray-400 text-sm">
+                <p className="text-gray-300 text-sm">
                   Download your official record of completion.
                 </p>
               </div>
@@ -200,14 +292,13 @@ export default function QuizAttemptDetails() {
               onClick={handleDownloadCertificate}
               className="px-6 py-3 bg-white text-gray-900 font-bold rounded-xl hover:bg-gray-100 transition shadow-lg flex items-center gap-2"
             >
-              <Download size={20} /> Download PDF
+              <Download size={20} /> Get Certificate
             </button>
           </div>
         )}
 
         <canvas ref={canvasRef} className="hidden" />
 
-        {/* Score Summary Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
           <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:border-gray-300 transition-colors">
             <div className="flex items-center gap-4">
@@ -252,7 +343,7 @@ export default function QuizAttemptDetails() {
           <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:border-gray-300 transition-colors">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-orange-50 text-orange-600 rounded-xl">
-                <Timer size={28} />
+                <Clock size={28} />
               </div>
               <div>
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
@@ -266,38 +357,48 @@ export default function QuizAttemptDetails() {
           </div>
         </div>
 
-        {/* Questions List */}
         <div className="space-y-6">
           <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
             <CheckCircle2 className="text-gray-900" size={20} /> Question
             Breakdown
           </h2>
 
-          {attempt.answers.map((record, index) => {
-            const question = record.question;
-            if (!question) return null;
+          {fullReport.map((item, index) => {
+            const { question, userAnswer } = item;
 
-            const isCorrect = record.isCorrect;
+            let status = "unattempted";
+            if (userAnswer) {
+              status = userAnswer.isCorrect ? "correct" : "wrong";
+            }
 
             return (
               <div
-                key={index}
+                key={question._id}
                 className={`bg-white rounded-2xl border-2 overflow-hidden shadow-sm transition-all ${
-                  isCorrect ? "border-green-100" : "border-red-50"
+                  status === "correct"
+                    ? "border-green-100"
+                    : status === "wrong"
+                    ? "border-red-50"
+                    : "border-gray-200 border-dashed"
                 }`}
               >
-                {/* Question Header */}
                 <div
                   className={`px-6 py-5 flex justify-between items-start gap-4 ${
-                    isCorrect ? "bg-green-50/30" : "bg-red-50/30"
+                    status === "correct"
+                      ? "bg-green-50/30"
+                      : status === "wrong"
+                      ? "bg-red-50/30"
+                      : "bg-gray-50"
                   }`}
                 >
                   <div className="flex gap-4">
                     <span
-                      className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${
-                        isCorrect
+                      className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${
+                        status === "correct"
                           ? "bg-green-100 text-green-800 border border-green-200"
-                          : "bg-red-100 text-red-800 border border-red-200"
+                          : status === "wrong"
+                          ? "bg-red-100 text-red-800 border border-red-200"
+                          : "bg-gray-200 text-gray-600 border border-gray-300"
                       }`}
                     >
                       {index + 1}
@@ -306,28 +407,36 @@ export default function QuizAttemptDetails() {
                       {question.questionText}
                     </h3>
                   </div>
-                  <div className="flex-shrink-0">
-                    {isCorrect ? (
+                  <div className="shrink-0">
+                    {status === "correct" && (
                       <span className="flex items-center gap-1.5 text-green-700 font-bold text-xs bg-white px-3 py-1.5 rounded-lg shadow-sm border border-green-200">
-                        <CheckCircle2 size={14} /> +{record.pointsEarned} pts
+                        <CheckCircle2 size={14} /> +{question.points} pts
                       </span>
-                    ) : (
+                    )}
+                    {status === "wrong" && (
                       <span className="flex items-center gap-1.5 text-red-600 font-bold text-xs bg-white px-3 py-1.5 rounded-lg shadow-sm border border-red-200">
                         <XCircle size={14} /> 0 pts
+                      </span>
+                    )}
+                    {status === "unattempted" && (
+                      <span className="flex items-center gap-1.5 text-gray-500 font-bold text-xs bg-white px-3 py-1.5 rounded-lg shadow-sm border border-gray-300">
+                        <HelpCircle size={14} /> Skipped
                       </span>
                     )}
                   </div>
                 </div>
 
-                {/* Answers Section */}
                 <div className="p-6 md:p-8 space-y-6">
                   {(question.questionType === "mcq" ||
                     question.questionType === "multiple-correct") && (
                     <div className="grid gap-3">
                       {question.options.map((opt, i) => {
-                        const isSelected = Array.isArray(record.answer)
-                          ? record.answer.includes(opt.text)
-                          : record.answer === opt.text;
+                        const isSelected = userAnswer
+                          ? Array.isArray(userAnswer.answer)
+                            ? userAnswer.answer.includes(opt.text)
+                            : userAnswer.answer === opt.text
+                          : false;
+
                         const isActuallyCorrect = opt.isCorrect;
 
                         let styleClass =
@@ -379,20 +488,19 @@ export default function QuizAttemptDetails() {
                         </p>
                         <div
                           className={`p-4 rounded-xl border-2 text-base font-medium ${
-                            isCorrect
+                            status === "correct"
                               ? "border-green-200 bg-green-50 text-green-900"
-                              : "border-red-200 bg-red-50 text-red-900"
+                              : status === "wrong"
+                              ? "border-red-200 bg-red-50 text-red-900"
+                              : "border-gray-200 bg-gray-50 text-gray-400 italic"
                           }`}
                         >
-                          {record.answer || (
-                            <span className="italic text-gray-400 font-normal">
-                              No answer submitted
-                            </span>
-                          )}
+                          {userAnswer?.answer ||
+                            "You did not attempt this question."}
                         </div>
                       </div>
 
-                      {!isCorrect &&
+                      {status !== "correct" &&
                         question.correctAnswers &&
                         question.correctAnswers.length > 0 && (
                           <div>
@@ -408,12 +516,12 @@ export default function QuizAttemptDetails() {
                   )}
 
                   {question.explanation && (
-                    <div className="mt-6 p-5 bg-gray-50 rounded-2xl flex gap-4 border border-gray-200">
-                      <div className="bg-gray-200 p-2 rounded-lg h-fit text-gray-600">
+                    <div className="mt-6 p-5 bg-blue-50 rounded-2xl flex gap-4 border border-blue-100">
+                      <div className="bg-blue-200 p-2 rounded-lg h-fit text-blue-700">
                         <AlertCircle size={20} />
                       </div>
                       <div className="text-sm text-gray-700 leading-relaxed">
-                        <span className="font-bold block mb-1 text-gray-900">
+                        <span className="font-bold block mb-1 text-blue-900">
                           Explanation
                         </span>
                         {question.explanation}
@@ -427,7 +535,6 @@ export default function QuizAttemptDetails() {
         </div>
       </div>
 
-      {/* --- SCROLL TO TOP BUTTON --- */}
       {showScrollTop && (
         <button
           onClick={scrollToTop}
