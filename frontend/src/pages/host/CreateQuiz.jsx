@@ -9,6 +9,7 @@ import {
   AlignLeft,
   ArrowRight,
   X,
+  Loader2,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -47,17 +48,19 @@ export default function CreateQuiz() {
 
     const start = new Date(formData.startTime);
     const now = new Date();
-
-    // Check if Start Time is in the future
     if (start < now) {
       return toast.error("Start time must be in the future");
     }
 
     setLoading(true);
     try {
-      const { data } = await api.post(endpoints.quiz.create, formData);
+      const payload = {
+        ...formData,
+        startTime: new Date(formData.startTime).toISOString(),
+      };
+
+      const { data } = await api.post(endpoints.quiz.create, payload);
       toast.success("Quiz created successfully!");
-      // Navigate to Manage Quiz to add questions
       navigate(`/host/manage/${data.quiz.id}`);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to create quiz");
@@ -236,28 +239,6 @@ export default function CreateQuiz() {
                     className="w-6 h-6 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
                   />
                 </label>
-                {/* <label className="flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50/30 transition cursor-pointer group">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 text-blue-600 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition">
-                      <Settings size={18} />
-                    </div>
-                    <div>
-                      <span className="block font-medium text-gray-800">
-                        Allow Multiple Attempts
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        Participants can retake the quiz
-                      </span>
-                    </div>
-                  </div>
-                  <input
-                    type="checkbox"
-                    name="settings.allowMultipleAttempts"
-                    checked={formData.settings.allowMultipleAttempts}
-                    onChange={handleChange}
-                    className="w-6 h-6 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
-                  />
-                </label> */}
               </div>
             </div>
           </section>
@@ -270,7 +251,9 @@ export default function CreateQuiz() {
               className="px-8 py-4 bg-blue-600 text-white text-lg font-bold rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-200 flex items-center gap-2 disabled:opacity-70 transform active:scale-95"
             >
               {loading ? (
-                <span>Creating...</span>
+                <>
+                  <Loader2 className="animate-spin" size={20} /> Creating...
+                </>
               ) : (
                 <>
                   Create & Continue <ArrowRight size={20} />

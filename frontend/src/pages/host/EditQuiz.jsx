@@ -35,12 +35,21 @@ export default function EditQuiz() {
       try {
         const { data } = await api.get(endpoints.quiz.getById(quizId));
         const quiz = data.quiz;
+
+        // 🟢 FIX: Correctly format date to Local Time (Indian Standard Time)
+        // The input type="datetime-local" expects format: YYYY-MM-DDTHH:mm
         const formatDateForInput = (dateString) => {
           if (!dateString) return "";
           const date = new Date(dateString);
-          const offsetMs = date.getTimezoneOffset() * 60 * 1000;
-          const localDate = new Date(date.getTime() - offsetMs);
-          return localDate.toISOString().slice(0, 16);
+          
+          // Get local components
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
+          const day = String(date.getDate()).padStart(2, "0");
+          const hours = String(date.getHours()).padStart(2, "0");
+          const minutes = String(date.getMinutes()).padStart(2, "0");
+
+          return `${year}-${month}-${day}T${hours}:${minutes}`;
         };
 
         setFormData({
