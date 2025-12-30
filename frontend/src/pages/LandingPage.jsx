@@ -69,7 +69,7 @@ export default function LandingPage() {
               onClick={() => window.scrollTo(0, 0)}
             >
               <span className="text-3xl font-black tracking-tight bg-linear-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                BudhiX
+                BuddhiX
               </span>
             </div>
 
@@ -278,7 +278,7 @@ export default function LandingPage() {
               <div className="md:col-span-1">
                 <div className="flex items-center gap-3 mb-6">
                   <span className="text-2xl font-bold font-Kanit text-blue-700">
-                    BudhiX
+                    BuddhiX
                   </span>
                 </div>
                 <p className="text-slate-600 text-sm leading-relaxed">
@@ -373,7 +373,7 @@ export default function LandingPage() {
             </div>
 
             <div className="pt-12 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-slate-500">
-              <p>© {new Date().getFullYear()} BudhiX. All rights reserved.</p>
+              <p>© {new Date().getFullYear()} BuddhiX. All rights reserved.</p>
               <p>Made with care for educators and teams worldwide.</p>
             </div>
           </div>

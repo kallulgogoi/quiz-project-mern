@@ -64,7 +64,7 @@ export default function ManageQuiz() {
     const addHeader = () => {
       doc.setFontSize(22);
       doc.setTextColor(79, 70, 229); // Indigo
-      doc.text("BudhiX", 14, 15);
+      doc.text("BuddhiX", 14, 15);
       doc.setFontSize(12);
       doc.setTextColor(100);
       doc.text("Smart Quiz Platform", 14, 22);
@@ -104,7 +104,7 @@ export default function ManageQuiz() {
       },
     });
 
-    doc.save("BudhiX_Quiz_Questions.pdf");
+    doc.save("BuddhiX_Quiz_Questions.pdf");
   };
 
   const toggleType = (type) => {

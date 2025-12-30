@@ -66,7 +66,7 @@ export default function Layout() {
             onClick={closeMenu}
             className="text-3xl font-black tracking-tight bg-linear-to-r from-indigo-600 to-purple-600 font-Kanit bg-clip-text text-transparent"
           >
-            BudhiX
+            BuddhiX
           </Link>
 
           {/* Desktop Nav */}

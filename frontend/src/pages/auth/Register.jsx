@@ -83,7 +83,7 @@ export default function Register() {
             Create Account
           </h1>
           <p className="text-slate-600 mb-10 text-lg">
-            Join BudhiX and start quizzing today
+            Join BuddhiX and start quizzing today
           </p>
 
           {/* Action Area */}
