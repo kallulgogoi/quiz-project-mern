@@ -36,7 +36,7 @@ export default function LiveLeaderboard() {
       const completed = data.leaderboard.length;
       const totalScore = data.leaderboard.reduce(
         (acc, curr) => acc + curr.totalScore,
-        0
+        0,
       );
       const avg = completed ? Math.round(totalScore / completed) : 0;
 
@@ -76,7 +76,7 @@ export default function LiveLeaderboard() {
               id: Math.random(),
             },
             ...prev,
-          ].slice(0, 5)
+          ].slice(0, 5),
         );
 
         fetchLeaderboard();
@@ -196,12 +196,12 @@ export default function LiveLeaderboard() {
                           entry.user?.profilePicture
                             ? entry.user.profilePicture
                             : `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                                entry.user?.username || "User"
+                                entry.user?.username || "User",
                               )}&background=random&color=fff&bold=true`
                         }
                         onError={(e) => {
                           e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                            entry.user?.username || "User"
+                            entry.user?.username || "User",
                           )}&background=random&color=fff&bold=true`;
                         }}
                         alt={
@@ -222,11 +222,11 @@ export default function LiveLeaderboard() {
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-gray-400 font-medium mt-0.5">
+                        {/* <div className="flex items-center gap-3 text-xs text-gray-400 font-medium mt-0.5">
                           <span className="flex items-center gap-1">
                             <Clock size={12} /> {entry.timeTaken}s
                           </span>
-                        </div>
+                        </div> */}
                       </div>
                     </div>
 

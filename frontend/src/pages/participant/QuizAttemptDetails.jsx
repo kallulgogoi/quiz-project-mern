@@ -19,7 +19,7 @@ import { format, differenceInMinutes } from "date-fns";
 import toast from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable"; // 🟢 FIXED IMPORT
+import autoTable from "jspdf-autotable";
 
 export default function QuizAttemptDetails() {
   const { quizId } = useParams();
@@ -30,14 +30,25 @@ export default function QuizAttemptDetails() {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const canvasRef = useRef(null);
 
+  // Waiting Room State
+  const [isWaiting, setIsWaiting] = useState(false);
+
   useEffect(() => {
     const fetchAttempt = async () => {
       try {
         const { data } = await api.get(endpoints.quiz.attempt(quizId));
         setAttempt(data.attempt);
       } catch (err) {
-        console.error("Failed to load attempt", err);
-        toast.error("Could not load result details");
+        // Waiting Room State
+        if (
+          err.response?.status === 403 &&
+          err.response?.data?.isAvailable === false
+        ) {
+          setIsWaiting(true);
+        } else {
+          console.error("Failed to load attempt", err);
+          toast.error("Could not load result details");
+        }
       } finally {
         setLoading(false);
       }
@@ -60,18 +71,19 @@ export default function QuizAttemptDetails() {
   const fullReport =
     attempt?.quiz?.questions?.map((question) => {
       const userAnswer = attempt.answers.find(
-        (a) => a.question && a.question._id === question._id
+        (a) => a.question && a.question._id === question._id,
       );
       return {
         question,
         userAnswer: userAnswer || null,
       };
     }) || [];
+
   const handleDownloadReport = () => {
     if (!attempt) return;
 
     const doc = new jsPDF();
-    const { quiz, totalScore, timeTaken } = attempt;
+    const { quiz, totalScore } = attempt;
 
     // Header
     doc.setFontSize(20);
@@ -173,7 +185,7 @@ export default function QuizAttemptDetails() {
       ctx.fillText(
         `Awarded: ${new Date().toLocaleDateString()}`,
         img.width / 2,
-        img.height / 2 + fontSize * 1.5
+        img.height / 2 + fontSize * 1.5,
       );
 
       try {
@@ -193,6 +205,30 @@ export default function QuizAttemptDetails() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <TrophySpin color="#23eeff" size="medium" text="" textColor="#0ae6f9" />
+      </div>
+    );
+  }
+
+  // RENDER WAITING ROOM UI (If they try to bypass the main result screen)
+  if (isWaiting) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-6">
+        <div className="bg-white p-10 rounded-3xl shadow-xl text-center max-w-md w-full border border-gray-200">
+          <Clock size={48} className="text-indigo-500 mx-auto mb-6" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Quiz Ongoing
+          </h2>
+          <p className="text-gray-600 mb-6 font-medium">
+            Detailed performance analysis is hidden while other participants are
+            still taking the quiz. Please wait until it finishes.
+          </p>
+          <button
+            onClick={() => navigate(`/result/${quizId}`)}
+            className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-md hover:bg-indigo-700 transition"
+          >
+            Go to Waiting Room
+          </button>
+        </div>
       </div>
     );
   }
@@ -218,8 +254,8 @@ export default function QuizAttemptDetails() {
   const completionDate = attempt.finishedAt
     ? new Date(attempt.finishedAt)
     : attempt.createdAt
-    ? new Date(attempt.createdAt)
-    : null;
+      ? new Date(attempt.createdAt)
+      : null;
 
   let durationMins = 0;
   if (attempt.timeTaken > 0) {
@@ -227,7 +263,7 @@ export default function QuizAttemptDetails() {
   } else if (attempt.startedAt && attempt.finishedAt) {
     durationMins = differenceInMinutes(
       new Date(attempt.finishedAt),
-      new Date(attempt.startedAt)
+      new Date(attempt.startedAt),
     );
   }
   const durationDisplay = durationMins < 1 ? "< 1 min" : `${durationMins} mins`;
@@ -378,8 +414,8 @@ export default function QuizAttemptDetails() {
                   status === "correct"
                     ? "border-green-100"
                     : status === "wrong"
-                    ? "border-red-50"
-                    : "border-gray-200 border-dashed"
+                      ? "border-red-50"
+                      : "border-gray-200 border-dashed"
                 }`}
               >
                 <div
@@ -387,8 +423,8 @@ export default function QuizAttemptDetails() {
                     status === "correct"
                       ? "bg-green-50/30"
                       : status === "wrong"
-                      ? "bg-red-50/30"
-                      : "bg-gray-50"
+                        ? "bg-red-50/30"
+                        : "bg-gray-50"
                   }`}
                 >
                   <div className="flex gap-4">
@@ -397,8 +433,8 @@ export default function QuizAttemptDetails() {
                         status === "correct"
                           ? "bg-green-100 text-green-800 border border-green-200"
                           : status === "wrong"
-                          ? "bg-red-100 text-red-800 border border-red-200"
-                          : "bg-gray-200 text-gray-600 border border-gray-300"
+                            ? "bg-red-100 text-red-800 border border-red-200"
+                            : "bg-gray-200 text-gray-600 border border-gray-300"
                       }`}
                     >
                       {index + 1}
@@ -491,8 +527,8 @@ export default function QuizAttemptDetails() {
                             status === "correct"
                               ? "border-green-200 bg-green-50 text-green-900"
                               : status === "wrong"
-                              ? "border-red-200 bg-red-50 text-red-900"
-                              : "border-gray-200 bg-gray-50 text-gray-400 italic"
+                                ? "border-red-200 bg-red-50 text-red-900"
+                                : "border-gray-200 bg-gray-50 text-gray-400 italic"
                           }`}
                         >
                           {userAnswer?.answer ||

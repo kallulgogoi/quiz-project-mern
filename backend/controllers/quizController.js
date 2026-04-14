@@ -114,7 +114,7 @@ exports.getQuizByCode = async (req, res) => {
     const canAccess =
       quiz.host._id.toString() === req.user._id.toString() ||
       quiz.participants.some(
-        (p) => p._id.toString() === req.user._id.toString()
+        (p) => p._id.toString() === req.user._id.toString(),
       );
 
     if (!canAccess) {
@@ -144,29 +144,36 @@ exports.joinQuiz = async (req, res) => {
 
     const quiz = await Quiz.findOne({ code: code.toUpperCase() });
     if (!quiz) {
-      return res.status(404).json({
-        success: false,
-        message: "Quiz not found",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "Quiz not found" });
     }
 
-    // 🟢 FIX: Check if Time has passed OR Status is completed
     const now = new Date();
     if (
       quiz.status === "completed" ||
       (quiz.endTime && now > new Date(quiz.endTime))
     ) {
-      return res.status(400).json({
-        success: false,
-        message: "This quiz has ended",
-      });
+      return res
+        .status(400)
+        .json({ success: false, message: "This quiz has ended" });
     }
 
     const alreadyJoined = quiz.participants.includes(req.user._id);
+
+    // If they already joined, welcome them back instead of throwing an error!
     if (alreadyJoined) {
-      return res.status(400).json({
-        success: false,
-        message: "You have already joined this quiz",
+      return res.json({
+        success: true,
+        message: "Welcome back! Resuming quiz...",
+        quiz: {
+          id: quiz._id,
+          title: quiz.title,
+          code: quiz.code,
+          startTime: quiz.startTime,
+          endTime: quiz.endTime,
+          status: quiz.status,
+        },
       });
     }
 
@@ -175,10 +182,7 @@ exports.joinQuiz = async (req, res) => {
 
     await User.findByIdAndUpdate(req.user._id, {
       $push: {
-        quizzesParticipated: {
-          quiz: quiz._id,
-          attemptedAt: new Date(),
-        },
+        quizzesParticipated: { quiz: quiz._id, attemptedAt: new Date() },
       },
     });
 
@@ -196,10 +200,7 @@ exports.joinQuiz = async (req, res) => {
     });
   } catch (error) {
     console.error("Join quiz error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to join quiz",
-    });
+    res.status(500).json({ success: false, message: "Failed to join quiz" });
   }
 };
 
@@ -288,7 +289,7 @@ exports.deleteQuiz = async (req, res) => {
 
     await User.updateMany(
       { "quizzesParticipated.quiz": quizId },
-      { $pull: { quizzesParticipated: { quiz: quizId } } }
+      { $pull: { quizzesParticipated: { quiz: quizId } } },
     );
 
     await Quiz.findByIdAndDelete(quizId);
@@ -321,7 +322,7 @@ exports.getUserQuizzes = async (req, res) => {
           status: "active",
           endTime: { $lt: now },
         },
-        { $set: { status: "completed" } }
+        { $set: { status: "completed" } },
       );
 
       quizzes = await Quiz.find({ host: req.user._id })
@@ -515,7 +516,7 @@ exports.submitAnswers = async (req, res) => {
 
     for (const answer of answers) {
       const question = quiz.questions.find(
-        (q) => q._id.toString() === answer.questionId
+        (q) => q._id.toString() === answer.questionId,
       );
       if (!question) continue;
 
@@ -537,7 +538,7 @@ exports.submitAnswers = async (req, res) => {
             .filter((opt) => opt.isCorrect)
             .map((opt) => opt.text);
           const correctCount = userAnswers.filter((ans) =>
-            correctAnswers.includes(ans)
+            correctAnswers.includes(ans),
           ).length;
           isCorrect =
             correctCount === correctAnswers.length &&
@@ -573,7 +574,7 @@ exports.submitAnswers = async (req, res) => {
     participant.totalScore = totalScore;
     participant.timeTaken = answerRecords.reduce(
       (sum, ans) => sum + (ans.timeTaken || 0),
-      0
+      0,
     );
     participant.completed = true;
     participant.finishedAt = now;
@@ -599,7 +600,7 @@ exports.submitAnswers = async (req, res) => {
           "quizzesParticipated.$.score": totalScore,
           "quizzesParticipated.$.rank": rank,
         },
-      }
+      },
     );
 
     const io = req.app.get("io");
@@ -639,17 +640,30 @@ exports.getLeaderboard = async (req, res) => {
 
     const quiz = await Quiz.findById(quizId);
     if (!quiz) {
-      return res.status(404).json({
+      return res
+        .status(404)
+        .json({ success: false, message: "Quiz not found" });
+    }
+
+    const isHost = quiz.host.toString() === req.user._id.toString();
+    const isParticipant = quiz.participants.includes(req.user._id);
+
+    // Block early access to leaderboard for participants
+    const now = new Date();
+    if (
+      !isHost &&
+      quiz.status !== "completed" &&
+      now < new Date(quiz.endTime)
+    ) {
+      return res.status(403).json({
         success: false,
-        message: "Quiz not found",
+        message: "The quiz is still ongoing.",
+        isAvailable: false,
+        endTime: quiz.endTime, // Send this to the frontend for the countdown
       });
     }
 
-    const canView =
-      quiz.host.toString() === req.user._id.toString() ||
-      quiz.participants.includes(req.user._id);
-
-    if (!canView && !quiz.settings.showLeaderboard) {
+    if (!isHost && !isParticipant && !quiz.settings.showLeaderboard) {
       return res.status(403).json({
         success: false,
         message: "Leaderboard is not public for this quiz",
@@ -664,16 +678,12 @@ exports.getLeaderboard = async (req, res) => {
       .populate("user", "username profilePicture")
       .limit(50);
 
-    res.json({
-      success: true,
-      leaderboard,
-    });
+    res.json({ success: true, leaderboard });
   } catch (error) {
     console.error("Get leaderboard error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to get leaderboard",
-    });
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to get leaderboard" });
   }
 };
 
@@ -777,7 +787,7 @@ exports.getQuizById = async (req, res) => {
     }
     const isHost = quiz.host.toString() === req.user._id.toString();
     const isParticipant = quiz.participants.some(
-      (p) => p._id.toString() === req.user._id.toString()
+      (p) => p._id.toString() === req.user._id.toString(),
     );
 
     if (!isHost && !isParticipant) {
@@ -792,43 +802,54 @@ exports.getQuizById = async (req, res) => {
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
+// Get My Attempt
 exports.getMyAttempt = async (req, res) => {
   try {
     const { quizId } = req.params;
+
+    const quizInfo = await Quiz.findById(quizId);
+    if (!quizInfo) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Quiz not found" });
+    }
+
+    //Block early access to personal performance analysis
+    const now = new Date();
+    if (quizInfo.status !== "completed" && now < new Date(quizInfo.endTime)) {
+      return res.status(403).json({
+        success: false,
+        message: "The quiz is still ongoing.",
+        isAvailable: false,
+        endTime: quizInfo.endTime,
+      });
+    }
+
     const participant = await Participant.findOne({
       quiz: quizId,
       user: req.user._id,
     })
       .populate({
         path: "quiz",
-        select: "title description duration startTime questions", // Include questions here
-        populate: {
-          path: "questions",
-          model: "Question", // Fully expand the question details
-        },
+        select: "title description duration startTime questions",
+        populate: { path: "questions", model: "Question" },
       })
-      .populate("answers.question"); // Keep this to match user answers
+      .populate("answers.question");
 
     if (!participant) {
-      return res.status(404).json({
-        success: false,
-        message: "Attempt details not found",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "Attempt details not found" });
     }
 
-    res.json({
-      success: true,
-      attempt: participant,
-    });
+    res.json({ success: true, attempt: participant });
   } catch (error) {
     console.error("Get my attempt error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch attempt details",
-    });
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch attempt details" });
   }
 };
-
 exports.getQuizAttempts = async (req, res) => {
   try {
     const { quizId } = req.params;

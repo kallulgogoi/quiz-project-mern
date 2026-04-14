@@ -9,7 +9,7 @@ import {
   Download, // Import Download icon
 } from "lucide-react";
 import { TrophySpin } from "react-loading-indicators";
-import * as XLSX from "xlsx"; // 🟢 IMPORT XLSX
+import * as XLSX from "xlsx"; // IMPORT XLSX
 
 export default function QuizReports() {
   const { quizId } = useParams();
@@ -32,17 +32,17 @@ export default function QuizReports() {
     fetchAttempts();
   }, [quizId]);
 
-  // 🟢 NEW: Handle Excel Download
+  // Handle Excel Download
   const handleDownloadExcel = () => {
     if (attempts.length === 0) return;
 
     // 1. Format Data for Excel
     const dataToExport = attempts.map((attempt) => ({
       "Participant Name": attempt.user.username,
-      "Email": attempt.user.email,
-      "Score": attempt.totalScore,
+      Email: attempt.user.email,
+      Score: attempt.totalScore,
       "Time Taken (sec)": attempt.timeTaken,
-      "Date": new Date(attempt.finishedAt).toLocaleDateString(),
+      Date: new Date(attempt.finishedAt).toLocaleDateString(),
     }));
 
     // 2. Create Sheet
@@ -55,7 +55,7 @@ export default function QuizReports() {
   };
 
   const filteredAttempts = attempts.filter((a) =>
-    a.user.username.toLowerCase().includes(search.toLowerCase())
+    a.user.username.toLowerCase().includes(search.toLowerCase()),
   );
 
   if (loading)
@@ -88,7 +88,7 @@ export default function QuizReports() {
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto">
-            {/* 🟢 NEW: Download Button */}
+            {/* Download Button */}
             <button
               onClick={handleDownloadExcel}
               className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition shadow-sm whitespace-nowrap"
@@ -161,14 +161,14 @@ export default function QuizReports() {
                       {attempt.totalScore}
                     </p>
                   </div>
-                  <div className="text-center">
+                  {/* <div className="text-center">
                     <p className="text-xs text-gray-400 font-bold uppercase">
                       Time
                     </p>
                     <p className="text-sm font-bold text-gray-700">
                       {attempt.timeTaken}s
                     </p>
-                  </div>
+                  </div> */}
                   <ChevronRight className="text-gray-300" />
                 </div>
               </div>

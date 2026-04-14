@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import api, { endpoints } from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
+import { useSocket } from "../../context/SocketContext";
 import {
   Trophy,
   Medal,
@@ -10,35 +11,90 @@ import {
   Search,
   User,
   ArrowLeft,
+  Clock,
 } from "lucide-react";
 import { TrophySpin } from "react-loading-indicators";
 
 export default function Result() {
   const { quizId } = useParams();
   const { user } = useAuth();
+  const socket = useSocket();
+
   const [leaderboard, setLeaderboard] = useState([]);
   const [quiz, setQuiz] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [lbRes, quizRes] = await Promise.all([
-          api.get(endpoints.quiz.leaderboard(quizId)),
-          api.get(endpoints.quiz.getById(quizId)),
-        ]);
+  // Waiting Room State
+  const [isWaiting, setIsWaiting] = useState(false);
+  const [targetEndTime, setTargetEndTime] = useState(null);
+  const [countdown, setCountdown] = useState("");
 
-        setLeaderboard(lbRes.data.leaderboard || []);
-        setQuiz(quizRes.data.quiz);
-      } catch (err) {
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [lbRes, quizRes] = await Promise.all([
+        api.get(endpoints.quiz.leaderboard(quizId)),
+        api.get(endpoints.quiz.getById(quizId)),
+      ]);
+
+      setLeaderboard(lbRes.data.leaderboard || []);
+      setQuiz(quizRes.data.quiz);
+      setIsWaiting(false);
+    } catch (err) {
+      // Catch the 403 Early Access Error from Backend
+      if (
+        err.response?.status === 403 &&
+        err.response?.data?.isAvailable === false
+      ) {
+        setIsWaiting(true);
+        setTargetEndTime(new Date(err.response.data.endTime));
+      } else {
         console.error("Failed to load data", err);
-      } finally {
-        setLoading(false);
       }
-    };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
-  }, [quizId]);
+
+    // Listen for Host Ending the Quiz Live
+    if (socket) {
+      socket.emit("join-quiz-room", quizId);
+      socket.on("quiz-ended", () => {
+        fetchData(); // Refresh immediately when host ends it
+      });
+    }
+
+    return () => {
+      if (socket) socket.off("quiz-ended");
+    };
+  }, [quizId, socket]);
+
+  // Countdown Timer Effect
+  useEffect(() => {
+    if (!isWaiting || !targetEndTime) return;
+
+    const timer = setInterval(() => {
+      const now = new Date();
+      const diff = targetEndTime - now;
+
+      if (diff <= 0) {
+        clearInterval(timer);
+        setCountdown("00:00");
+        fetchData(); // Time is up, fetch the real leaderboard!
+      } else {
+        const m = Math.floor((diff / 1000 / 60) % 60);
+        const s = Math.floor((diff / 1000) % 60);
+        setCountdown(`${m}:${s.toString().padStart(2, "0")}`);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isWaiting, targetEndTime]);
+
   const isHost = useMemo(() => {
     if (!quiz || !user) return false;
     const hostId = quiz.host._id || quiz.host;
@@ -48,15 +104,14 @@ export default function Result() {
   const myResult = useMemo(() => {
     if (!user || leaderboard.length === 0) return null;
     const index = leaderboard.findIndex(
-      (entry) => entry.user?._id === user._id || entry.user?._id === user.id
+      (entry) => entry.user?._id === user._id || entry.user?._id === user.id,
     );
     if (index === -1) return null;
     return { ...leaderboard[index], rank: index + 1 };
   }, [leaderboard, user]);
 
-  // Filter leaderboard
   const filteredLeaderboard = leaderboard.filter((entry) =>
-    entry.user?.username.toLowerCase().includes(searchTerm.toLowerCase())
+    entry.user?.username.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const getRankIcon = (index) => {
@@ -80,6 +135,40 @@ export default function Result() {
         <TrophySpin color="#4f46e5" size="medium" text="" textColor="" />
       </div>
     );
+
+  // RENDER WAITING ROOM UI
+  if (isWaiting) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-indigo-50 p-4">
+        <div className="bg-white p-10 rounded-3xl shadow-xl text-center max-w-md w-full border border-indigo-100">
+          <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Clock size={40} className="text-indigo-600 animate-pulse" />
+          </div>
+          <h1 className="text-3xl font-black text-gray-900 mb-2">Great Job!</h1>
+          <p className="text-gray-500 mb-8 font-medium">
+            You finished early! Waiting for the quiz to end to reveal the
+            leaderboard and your performance.
+          </p>
+
+          <div className="bg-indigo-50 p-6 rounded-2xl border border-indigo-100">
+            <p className="text-sm text-indigo-800 font-bold uppercase tracking-widest mb-2">
+              Results revealing in
+            </p>
+            <div className="text-5xl font-mono font-black text-indigo-600">
+              {countdown}
+            </div>
+          </div>
+
+          <Link
+            to="/participated-quizzes"
+            className="inline-block mt-8 text-indigo-600 font-bold hover:underline"
+          >
+            Return to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-indigo-50 p-4 md:p-8">
@@ -201,11 +290,6 @@ export default function Result() {
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-gray-400 font-medium">
-                          {entry.timeTaken
-                            ? `${Math.round(entry.timeTaken)}s`
-                            : "0s"}
-                        </p>
                       </div>
                     </div>
 
@@ -224,21 +308,12 @@ export default function Result() {
           </div>
         </div>
         <div className="mt-10 text-center pb-10">
-          {isHost ? (
-            <Link
-              to="/created-quizzes"
-              className="inline-flex items-center gap-2 px-8 py-4 bg-gray-900 text-white rounded-2xl font-bold hover:bg-black transition shadow-xl hover:scale-105 transform"
-            >
-              <Home size={20} /> Back to Dashboard
-            </Link>
-          ) : (
-            <Link
-              to="/participated-quizzes"
-              className="inline-flex items-center gap-2 px-8 py-4 bg-gray-900 text-white rounded-2xl font-bold hover:bg-black transition shadow-xl hover:scale-105 transform"
-            >
-              <Home size={20} /> Back to Dashboard
-            </Link>
-          )}
+          <Link
+            to={isHost ? "/created-quizzes" : "/participated-quizzes"}
+            className="inline-flex items-center gap-2 px-8 py-4 bg-gray-900 text-white rounded-2xl font-bold hover:bg-black transition shadow-xl hover:scale-105 transform"
+          >
+            <Home size={20} /> Back to Dashboard
+          </Link>
         </div>
       </div>
     </div>
