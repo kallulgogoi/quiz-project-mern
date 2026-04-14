@@ -414,12 +414,9 @@ exports.startQuiz = async (req, res) => {
         });
       }
 
-      const lastStarted = existingAttempt.startedAt
-        ? new Date(existingAttempt.startedAt).getTime()
-        : 0;
-      const timeSinceStart = Date.now() - lastStarted;
-
-      if (timeSinceStart > 5000 || existingAttempt.completed) {
+      // Only update attemptCount and startedAt if they actually completed the previous attempt.
+      // If it is NOT completed, we do nothing to the DB here, which allows them to safely resume!
+      if (existingAttempt.completed) {
         existingAttempt.attemptCount += 1;
         existingAttempt.startedAt = now;
         existingAttempt.completed = false;
@@ -459,7 +456,7 @@ exports.startQuiz = async (req, res) => {
       },
       questions,
       settings: quiz.settings,
-      serverTime: new Date().toISOString(), // 🟢 NEW: Send Server Time for Sync
+      serverTime: new Date().toISOString(), // Send Server Time for Sync
     });
   } catch (error) {
     console.error("Start quiz error:", error);

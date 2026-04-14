@@ -14,6 +14,16 @@ import {
   ArrowUp,
   FileText,
   HelpCircle,
+  ChevronRight,
+  TrendingUp,
+  Target,
+  Timer,
+  BookOpen,
+  BarChart3,
+  Medal,
+  Share2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { format, differenceInMinutes } from "date-fns";
 import toast from "react-hot-toast";
@@ -28,6 +38,7 @@ export default function QuizAttemptDetails() {
   const [attempt, setAttempt] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [showExplanations, setShowExplanations] = useState(true);
   const canvasRef = useRef(null);
 
   // Waiting Room State
@@ -201,10 +212,36 @@ export default function QuizAttemptDetails() {
     };
   };
 
+  const calculateStats = () => {
+    if (!fullReport.length)
+      return { correct: 0, incorrect: 0, skipped: 0, accuracy: 0 };
+
+    const correct = fullReport.filter(
+      (item) => item.userAnswer?.isCorrect,
+    ).length;
+    const incorrect = fullReport.filter(
+      (item) => item.userAnswer && !item.userAnswer.isCorrect,
+    ).length;
+    const skipped = fullReport.filter((item) => !item.userAnswer).length;
+    const accuracy =
+      fullReport.length > 0
+        ? Math.round((correct / fullReport.length) * 100)
+        : 0;
+
+    return { correct, incorrect, skipped, accuracy };
+  };
+
+  const stats = calculateStats();
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <TrophySpin color="#23eeff" size="medium" text="" textColor="#0ae6f9" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-gray-50">
+        <div className="text-center">
+          <TrophySpin color="#4f46e5" size="medium" text="" textColor="" />
+          <p className="mt-4 text-sm text-gray-500 font-medium">
+            Loading analysis...
+          </p>
+        </div>
       </div>
     );
   }
@@ -212,22 +249,30 @@ export default function QuizAttemptDetails() {
   // RENDER WAITING ROOM UI (If they try to bypass the main result screen)
   if (isWaiting) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-6">
-        <div className="bg-white p-10 rounded-3xl shadow-xl text-center max-w-md w-full border border-gray-200">
-          <Clock size={48} className="text-indigo-500 mx-auto mb-6" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Quiz Ongoing
-          </h2>
-          <p className="text-gray-600 mb-6 font-medium">
-            Detailed performance analysis is hidden while other participants are
-            still taking the quiz. Please wait until it finishes.
-          </p>
-          <button
-            onClick={() => navigate(`/result/${quizId}`)}
-            className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-md hover:bg-indigo-700 transition"
-          >
-            Go to Waiting Room
-          </button>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-gray-50 p-4">
+        <div className="max-w-md w-full">
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+            <div className="h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
+            <div className="p-8 text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-indigo-100">
+                <Timer size={32} className="text-indigo-600" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">
+                Quiz In Progress
+              </h2>
+              <p className="text-gray-600 mb-6 leading-relaxed text-sm">
+                Detailed performance analysis is hidden while other participants
+                are still taking the quiz. Results will be available once the
+                quiz concludes.
+              </p>
+              <button
+                onClick={() => navigate(`/result/${quizId}`)}
+                className="w-full py-3 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-800 transition-all duration-200 shadow-md hover:shadow-lg"
+              >
+                Return to Waiting Room
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -235,15 +280,22 @@ export default function QuizAttemptDetails() {
 
   if (!attempt) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-6">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-gray-50 p-4">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle size={32} className="text-gray-400" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">
             Result Not Found
           </h2>
+          <p className="text-gray-500 mb-6 text-sm">
+            The analysis you're looking for doesn't exist or has been removed.
+          </p>
           <button
             onClick={() => navigate("/dashboard")}
-            className="text-gray-600 font-medium hover:text-black hover:underline transition"
+            className="inline-flex items-center gap-2 px-6 py-2.5 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-800 transition-all duration-200"
           >
+            <ArrowLeft size={16} />
             Return to Dashboard
           </button>
         </div>
@@ -266,206 +318,285 @@ export default function QuizAttemptDetails() {
       new Date(attempt.startedAt),
     );
   }
-  const durationDisplay = durationMins < 1 ? "< 1 min" : `${durationMins} mins`;
+  const durationDisplay =
+    durationMins < 1
+      ? "< 1 min"
+      : `${durationMins} min${durationMins > 1 ? "s" : ""}`;
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 relative">
-      <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate(-1)}
-              className="p-2.5 bg-gray-100 text-gray-700 hover:bg-gray-900 hover:text-white rounded-full transition-all duration-300 shadow-sm"
-              title="Go Back"
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <div>
-              <h1 className="text-xl font-extrabold text-gray-900 tracking-tight">
-                {attempt.quiz?.title}
-              </h1>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Result Analysis
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={handleDownloadReport}
-            className="hidden md:flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-xl font-bold hover:bg-black transition shadow-lg text-sm"
-          >
-            <FileText size={16} /> Report PDF
-          </button>
-        </div>
-      </div>
-
-      <div className="max-w-5xl mx-auto px-6 pt-8">
-        <div className="md:hidden mb-6">
-          <button
-            onClick={handleDownloadReport}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 text-white rounded-xl font-bold shadow-lg"
-          >
-            <FileText size={18} /> Download Result PDF
-          </button>
-        </div>
-
-        {attempt.quiz?.certificateTemplate && (
-          <div className="mb-8 bg-linear-to-r from-gray-900 to-gray-800 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl text-white">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-gray-700/50 rounded-full border border-gray-600">
-                <Award size={32} className="text-yellow-400" />
-              </div>
-              <div className="text-left">
-                <h3 className="text-lg font-bold text-white">
-                  Certificate Available
-                </h3>
-                <p className="text-gray-300 text-sm">
-                  Download your official record of completion.
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-gray-50 pb-20 relative">
+      {/* Header */}
+      <header className="bg-white/90 backdrop-blur-xl border-b border-gray-200/60 sticky top-0 z-30">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="h-16 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate(-1)}
+                className="p-2 hover:bg-gray-100 rounded-xl transition-all duration-200 text-gray-500 hover:text-gray-900 group"
+                aria-label="Go back"
+              >
+                <ArrowLeft
+                  size={20}
+                  className="group-hover:-translate-x-0.5 transition-transform"
+                />
+              </button>
+              <div className="hidden sm:block w-px h-8 bg-gray-200" />
+              <div>
+                <h1 className="text-base sm:text-lg font-semibold text-gray-900 truncate max-w-md">
+                  {attempt.quiz?.title}
+                </h1>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Performance Analysis
                 </p>
               </div>
             </div>
-            <button
-              onClick={handleDownloadCertificate}
-              className="px-6 py-3 bg-white text-gray-900 font-bold rounded-xl hover:bg-gray-100 transition shadow-lg flex items-center gap-2"
-            >
-              <Download size={20} /> Get Certificate
-            </button>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowExplanations(!showExplanations)}
+                className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all duration-200"
+                title={
+                  showExplanations ? "Hide explanations" : "Show explanations"
+                }
+              >
+                {showExplanations ? <EyeOff size={16} /> : <Eye size={16} />}
+                <span className="hidden md:inline">
+                  {showExplanations ? "Hide" : "Show"} Details
+                </span>
+              </button>
+              <button
+                onClick={handleDownloadReport}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-xl font-semibold hover:bg-gray-800 transition-all duration-200 shadow-md hover:shadow-lg text-sm"
+              >
+                <FileText size={16} />
+                <span className="hidden sm:inline">Download Report</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+        {/* Mobile Download Button */}
+        <div className="sm:hidden mb-6">
+          <button
+            onClick={handleDownloadReport}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 text-white rounded-xl font-semibold shadow-lg hover:bg-gray-800 transition-all duration-200"
+          >
+            <FileText size={18} />
+            Download Report PDF
+          </button>
+        </div>
+
+        {/* Certificate Banner */}
+        {attempt.quiz?.certificateTemplate && (
+          <div className="mb-8 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-2xl p-6 lg:p-8 shadow-xl overflow-hidden relative">
+            <div className="absolute inset-0 bg-black/10" />
+            <div className="relative flex flex-col lg:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+                  <Award size={28} className="text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-1">
+                    Certificate of Completion
+                  </h3>
+                  <p className="text-indigo-100 text-sm">
+                    Download your official achievement certificate
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleDownloadCertificate}
+                className="px-6 py-3 bg-white text-gray-900 font-semibold rounded-xl hover:bg-gray-50 transition-all duration-200 shadow-lg flex items-center gap-2 group"
+              >
+                <Download
+                  size={18}
+                  className="group-hover:scale-110 transition-transform"
+                />
+                Download Certificate
+                <ChevronRight
+                  size={16}
+                  className="group-hover:translate-x-0.5 transition-transform"
+                />
+              </button>
+            </div>
           </div>
         )}
 
         <canvas ref={canvasRef} className="hidden" />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:border-gray-300 transition-colors">
-            <div className="flex items-center gap-4">
-              <div
-                className={`p-3 rounded-xl ${
-                  attempt.totalScore > 0
-                    ? "bg-green-100 text-green-700"
-                    : "bg-gray-100 text-gray-600"
-                }`}
-              >
-                <Award size={28} />
+        {/* Stats Overview */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-8">
+          <div className="bg-white rounded-xl p-4 lg:p-5 border border-gray-200 shadow-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg flex items-center justify-center border border-blue-100">
+                <Award size={20} className="text-blue-600" />
               </div>
               <div>
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Total Score
                 </p>
-                <h3 className="text-2xl font-black text-gray-900">
-                  {attempt.totalScore} pts
-                </h3>
+                <p className="text-xl lg:text-2xl font-bold text-gray-900 tabular-nums">
+                  {attempt.totalScore}
+                </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:border-gray-300 transition-colors">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
-                <Calendar size={28} />
+          <div className="bg-white rounded-xl p-4 lg:p-5 border border-gray-200 shadow-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-emerald-50 to-green-50 rounded-lg flex items-center justify-center border border-emerald-100">
+                <Target size={20} className="text-emerald-600" />
               </div>
               <div>
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                  Date Taken
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Accuracy
                 </p>
-                <h3 className="text-lg font-bold text-gray-900">
+                <p className="text-xl lg:text-2xl font-bold text-gray-900 tabular-nums">
+                  {stats.accuracy}%
+                </p>
+              </div>
+            </div>
+            <div className="w-full bg-gray-100 rounded-full h-1.5">
+              <div
+                className="bg-emerald-500 h-1.5 rounded-full transition-all duration-500"
+                style={{ width: `${stats.accuracy}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-4 lg:p-5 border border-gray-200 shadow-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg flex items-center justify-center border border-amber-100">
+                <Calendar size={20} className="text-amber-600" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Completed
+                </p>
+                <p className="text-sm lg:text-base font-semibold text-gray-900">
                   {completionDate
                     ? format(completionDate, "MMM dd, yyyy")
                     : "N/A"}
-                </h3>
+                </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:border-gray-300 transition-colors">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-orange-50 text-orange-600 rounded-xl">
-                <Clock size={28} />
+          <div className="bg-white rounded-xl p-4 lg:p-5 border border-gray-200 shadow-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg flex items-center justify-center border border-purple-100">
+                <Timer size={20} className="text-purple-600" />
               </div>
               <div>
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Duration
                 </p>
-                <h3 className="text-2xl font-black text-gray-900">
+                <p className="text-xl lg:text-2xl font-bold text-gray-900">
                   {durationDisplay}
-                </h3>
+                </p>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="space-y-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <CheckCircle2 className="text-gray-900" size={20} /> Question
-            Breakdown
-          </h2>
+        {/* Question Breakdown Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center">
+              <BookOpen size={16} className="text-white" />
+            </div>
+            <h2 className="text-lg font-bold text-gray-900">
+              Question Breakdown
+            </h2>
+          </div>
 
+          <div className="flex items-center gap-3 text-xs">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full" />
+              <span className="text-gray-600">Correct ({stats.correct})</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 bg-red-500 rounded-full" />
+              <span className="text-gray-600">
+                Incorrect ({stats.incorrect})
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 bg-gray-300 rounded-full" />
+              <span className="text-gray-600">Skipped ({stats.skipped})</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Questions List */}
+        <div className="space-y-4">
           {fullReport.map((item, index) => {
             const { question, userAnswer } = item;
 
             let status = "unattempted";
             if (userAnswer) {
-              status = userAnswer.isCorrect ? "correct" : "wrong";
+              status = userAnswer.isCorrect ? "correct" : "incorrect";
             }
 
             return (
               <div
                 key={question._id}
-                className={`bg-white rounded-2xl border-2 overflow-hidden shadow-sm transition-all ${
-                  status === "correct"
-                    ? "border-green-100"
-                    : status === "wrong"
-                      ? "border-red-50"
-                      : "border-gray-200 border-dashed"
-                }`}
+                className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-all duration-200"
               >
-                <div
-                  className={`px-6 py-5 flex justify-between items-start gap-4 ${
-                    status === "correct"
-                      ? "bg-green-50/30"
-                      : status === "wrong"
-                        ? "bg-red-50/30"
-                        : "bg-gray-50"
-                  }`}
-                >
-                  <div className="flex gap-4">
-                    <span
-                      className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${
+                {/* Question Header */}
+                <div className="px-5 lg:px-6 py-4 flex items-start justify-between gap-4 border-b border-gray-100">
+                  <div className="flex gap-3 flex-1">
+                    <div
+                      className={`
+                      w-8 h-8 rounded-lg flex items-center justify-center font-semibold text-sm shrink-0
+                      ${
                         status === "correct"
-                          ? "bg-green-100 text-green-800 border border-green-200"
-                          : status === "wrong"
-                            ? "bg-red-100 text-red-800 border border-red-200"
-                            : "bg-gray-200 text-gray-600 border border-gray-300"
-                      }`}
+                          ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                          : status === "incorrect"
+                            ? "bg-red-100 text-red-700 border border-red-200"
+                            : "bg-gray-100 text-gray-600 border border-gray-200"
+                      }
+                    `}
                     >
                       {index + 1}
-                    </span>
-                    <h3 className="text-lg font-bold text-gray-800 pt-0.5 leading-snug">
+                    </div>
+                    <h3 className="font-semibold text-gray-900 text-base lg:text-lg leading-relaxed flex-1">
                       {question.questionText}
                     </h3>
                   </div>
+
                   <div className="shrink-0">
                     {status === "correct" && (
-                      <span className="flex items-center gap-1.5 text-green-700 font-bold text-xs bg-white px-3 py-1.5 rounded-lg shadow-sm border border-green-200">
-                        <CheckCircle2 size={14} /> +{question.points} pts
-                      </span>
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200">
+                        <CheckCircle2 size={14} />
+                        <span className="text-xs font-semibold">
+                          +{question.points}
+                        </span>
+                      </div>
                     )}
-                    {status === "wrong" && (
-                      <span className="flex items-center gap-1.5 text-red-600 font-bold text-xs bg-white px-3 py-1.5 rounded-lg shadow-sm border border-red-200">
-                        <XCircle size={14} /> 0 pts
-                      </span>
+                    {status === "incorrect" && (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg border border-red-200">
+                        <XCircle size={14} />
+                        <span className="text-xs font-semibold">0 pts</span>
+                      </div>
                     )}
                     {status === "unattempted" && (
-                      <span className="flex items-center gap-1.5 text-gray-500 font-bold text-xs bg-white px-3 py-1.5 rounded-lg shadow-sm border border-gray-300">
-                        <HelpCircle size={14} /> Skipped
-                      </span>
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-500 rounded-lg border border-gray-200">
+                        <HelpCircle size={14} />
+                        <span className="text-xs font-semibold">Skipped</span>
+                      </div>
                     )}
                   </div>
                 </div>
 
-                <div className="p-6 md:p-8 space-y-6">
+                {/* Question Content */}
+                <div className="p-5 lg:p-6 space-y-5">
+                  {/* MCQ / Multiple Choice Questions */}
                   {(question.questionType === "mcq" ||
                     question.questionType === "multiple-correct") && (
-                    <div className="grid gap-3">
+                    <div className="grid gap-2.5">
                       {question.options.map((opt, i) => {
                         const isSelected = userAnswer
                           ? Array.isArray(userAnswer.answer)
@@ -476,28 +607,32 @@ export default function QuizAttemptDetails() {
                         const isActuallyCorrect = opt.isCorrect;
 
                         let styleClass =
-                          "border-gray-100 bg-white text-gray-600 hover:bg-gray-50";
+                          "border-gray-200 bg-white text-gray-700";
                         let icon = null;
 
                         if (isSelected && isActuallyCorrect) {
                           styleClass =
-                            "border-green-500 bg-green-50 text-green-900 ring-1 ring-green-500 font-medium";
+                            "border-emerald-500 bg-emerald-50 text-emerald-900 ring-1 ring-emerald-500";
                           icon = (
                             <CheckCircle2
-                              size={20}
-                              className="text-green-600"
+                              size={18}
+                              className="text-emerald-600 shrink-0"
                             />
                           );
                         } else if (isSelected && !isActuallyCorrect) {
-                          styleClass =
-                            "border-red-300 bg-red-50 text-red-900 font-medium";
-                          icon = <XCircle size={20} className="text-red-600" />;
+                          styleClass = "border-red-300 bg-red-50 text-red-900";
+                          icon = (
+                            <XCircle
+                              size={18}
+                              className="text-red-600 shrink-0"
+                            />
+                          );
                         } else if (!isSelected && isActuallyCorrect) {
                           styleClass =
-                            "border-green-400 border-dashed bg-green-50/50 text-green-800";
+                            "border-emerald-300 border-dashed bg-emerald-50/50 text-emerald-800";
                           icon = (
-                            <span className="text-[10px] font-bold px-2 py-1 bg-green-100 text-green-800 rounded uppercase tracking-wide border border-green-200">
-                              Correct Answer
+                            <span className="text-[10px] font-bold px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md uppercase tracking-wide border border-emerald-200 shrink-0">
+                              Correct
                             </span>
                           );
                         }
@@ -505,9 +640,11 @@ export default function QuizAttemptDetails() {
                         return (
                           <div
                             key={i}
-                            className={`p-4 rounded-xl border-2 flex justify-between items-center transition-all ${styleClass}`}
+                            className={`p-4 rounded-lg border-2 flex items-center justify-between gap-3 transition-all ${styleClass}`}
                           >
-                            <span className="text-base">{opt.text}</span>
+                            <span className="text-sm lg:text-base">
+                              {opt.text}
+                            </span>
                             {icon}
                           </div>
                         );
@@ -515,24 +652,24 @@ export default function QuizAttemptDetails() {
                     </div>
                   )}
 
+                  {/* Fill in Blank / Descriptive Questions */}
                   {(question.questionType === "fill-blank" ||
                     question.questionType === "descriptive") && (
-                    <div className="space-y-6">
+                    <div className="space-y-4">
                       <div>
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                          Your Answer
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                          Your Response
                         </p>
                         <div
-                          className={`p-4 rounded-xl border-2 text-base font-medium ${
+                          className={`p-4 rounded-lg border-2 text-sm lg:text-base ${
                             status === "correct"
-                              ? "border-green-200 bg-green-50 text-green-900"
-                              : status === "wrong"
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-900 font-medium"
+                              : status === "incorrect"
                                 ? "border-red-200 bg-red-50 text-red-900"
-                                : "border-gray-200 bg-gray-50 text-gray-400 italic"
+                                : "border-gray-200 bg-gray-50 text-gray-500 italic"
                           }`}
                         >
-                          {userAnswer?.answer ||
-                            "You did not attempt this question."}
+                          {userAnswer?.answer || "No response provided"}
                         </div>
                       </div>
 
@@ -540,10 +677,10 @@ export default function QuizAttemptDetails() {
                         question.correctAnswers &&
                         question.correctAnswers.length > 0 && (
                           <div>
-                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                              Correct Answer
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                              Expected Answer
                             </p>
-                            <div className="p-4 rounded-xl border-2 border-green-200 bg-white text-green-800 font-medium shadow-sm">
+                            <div className="p-4 rounded-lg border-2 border-emerald-200 bg-white text-emerald-800 font-medium">
                               {question.correctAnswers.join(", ")}
                             </div>
                           </div>
@@ -551,16 +688,23 @@ export default function QuizAttemptDetails() {
                     </div>
                   )}
 
-                  {question.explanation && (
-                    <div className="mt-6 p-5 bg-blue-50 rounded-2xl flex gap-4 border border-blue-100">
-                      <div className="bg-blue-200 p-2 rounded-lg h-fit text-blue-700">
-                        <AlertCircle size={20} />
-                      </div>
-                      <div className="text-sm text-gray-700 leading-relaxed">
-                        <span className="font-bold block mb-1 text-blue-900">
-                          Explanation
-                        </span>
-                        {question.explanation}
+                  {/* Explanation */}
+                  {question.explanation && showExplanations && (
+                    <div className="mt-4 p-4 lg:p-5 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+                      <div className="flex gap-3">
+                        <div className="shrink-0">
+                          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <AlertCircle size={16} className="text-blue-600" />
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-xs font-bold text-blue-900 uppercase tracking-wider mb-1.5">
+                            Explanation
+                          </p>
+                          <p className="text-sm text-gray-700 leading-relaxed">
+                            {question.explanation}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -569,15 +713,19 @@ export default function QuizAttemptDetails() {
             );
           })}
         </div>
-      </div>
+      </main>
 
+      {/* Scroll to Top Button */}
       {showScrollTop && (
         <button
           onClick={scrollToTop}
-          className="fixed bottom-8 right-8 p-3.5 bg-gray-900 text-white rounded-full shadow-2xl hover:bg-black hover:scale-110 transition-all duration-300 z-50 animate-bounce"
-          title="Scroll to Top"
+          className="fixed bottom-6 right-6 p-3.5 bg-gray-900 text-white rounded-full shadow-xl hover:bg-gray-800 hover:scale-110 transition-all duration-300 z-50 group"
+          aria-label="Scroll to top"
         >
-          <ArrowUp size={24} />
+          <ArrowUp
+            size={22}
+            className="group-hover:-translate-y-0.5 transition-transform"
+          />
         </button>
       )}
     </div>
