@@ -24,7 +24,7 @@ const server = http.createServer(app);
 //SOCKET SETUP
 const io = socketIo(server, {
   cors: {
-    // Allow both localhost and your potential production URL
+    // Allow both localhost and potential production URL
     origin: [process.env.FRONTEND_URL, "http://localhost:5173"],
     methods: ["GET", "POST"],
     credentials: true,
